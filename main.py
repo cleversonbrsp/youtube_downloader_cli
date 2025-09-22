@@ -1,5 +1,6 @@
 import yt_dlp
 import os
+import subprocess
 
 def escolher_caminho():
     caminho = input("Dê um nome para a pasta de destino: ").strip() # Enter para padrão
@@ -9,6 +10,29 @@ def escolher_caminho():
         print(f"O caminho '{caminho}' não existe. Criando...")
         os.makedirs(caminho)
     return caminho
+
+def baixar_conteudo(comando_base, url, usar_cookies=False, navegador='chrome'):
+    comando = comando_base.copy()
+    if usar_cookies:
+        comando = ['yt-dlp', '--cookies-from-browser', navegador] + comando_base[1:]
+    comando.append(url)
+    subprocess.run(comando)
+
+def solicitar_cookies():
+    resp = input("Usar cookies do navegador para autenticação? (s/N): ").strip().lower()
+    return resp == 's'
+
+def baixar_video(url):
+    usar_cookies = solicitar_cookies()
+    baixar_conteudo(['yt-dlp', '-f', 'bestvideo+bestaudio'], url, usar_cookies)
+
+def baixar_audio(url):
+    usar_cookies = solicitar_cookies()
+    baixar_conteudo(['yt-dlp', '-x', '--audio-format', 'mp3'], url, usar_cookies)
+
+def baixar_legenda(url):
+    usar_cookies = solicitar_cookies()
+    baixar_conteudo(['yt-dlp', '--write-auto-sub', '--skip-download'], url, usar_cookies)
 
 def baixar_video(url, output_path):
     ydl_opts = {
