@@ -46,10 +46,9 @@ sudo dnf install ffmpeg
 ## 📂 Estrutura do Projeto
 
 ```
-youtube_downloader/
-│
-├── main.py         # Script principal com menu interativo
-└── README.md       # (opcional) Documentação do projeto
+.
+├── main.py      # Script principal com menu interativo
+└── readme.md    # Documentação do projeto
 ```
 
 ---
@@ -77,6 +76,10 @@ Ao iniciar o script, você verá:
 ```
 
 Você escolhe uma opção, fornece a URL do vídeo ou playlist, e informa (ou confirma) o diretório de destino.
+
+Observações sobre o diretório de destino:
+- Se você apenas pressionar Enter na pergunta do caminho, os downloads irão para `/home/cleverson/Downloads` (padrão atual no código).
+- Se o caminho informado não existir, ele será criado automaticamente.
 
 ---
 
