@@ -1,164 +1,160 @@
-# YouTube Downloader CLI com `yt-dlp`
+# YouTube Downloader CLI with yt-dlp
 
-## 🧾 Visão Geral
+## Overview
 
-Este script Python fornece uma interface de linha de comando interativa para baixar vídeos, áudios, playlists e **legendas** do YouTube. Utiliza `yt-dlp`, uma poderosa ferramenta baseada no `youtube-dl`, com suporte a `ffmpeg` para mesclar ou converter arquivos multimídia.
-
----
-
-## 🚀 Funcionalidades
-
-* ✅ Baixar vídeo completo em `.mp4` (melhor qualidade disponível)
-* ✅ Baixar apenas o áudio em `.mp3`
-* ✅ Baixar playlists completas (vídeo ou áudio)
-* ✅ Baixar **apenas legendas** (manual ou automática) em qualquer idioma
-* ✅ Escolha do diretório de destino para cada operação
+This Python script provides an interactive command-line interface to download **videos**, **audio**, **playlists**, and **subtitles** from YouTube. It uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) and **ffmpeg** for merging and converting media.
 
 ---
 
-## 🧱 Requisitos
+## Features
 
-### Python 3.7 ou superior
+- Download full video as `.mp4` (best available quality)
+- Download audio only as `.mp3`
+- Download full playlists (video or audio)
+- Download **subtitles only** (manual or auto) in any language
+- Choose output directory for each run
 
-### Bibliotecas Python:
+---
 
-```bash
-pip install yt-dlp
-```
+## Requirements
 
-### ffmpeg:
+- **Python 3.7+**
+- **yt-dlp:** `pip install yt-dlp` (or `py -m pip install yt-dlp` on Windows)
+- **ffmpeg** (for merging video+audio and converting to MP3)
 
-#### Ubuntu/Debian:
+### Installing ffmpeg
+
+**Ubuntu/Debian:**
 
 ```bash
 sudo apt update
 sudo apt install ffmpeg
 ```
 
-#### Fedora:
+**Fedora:**
 
 ```bash
 sudo dnf install ffmpeg
 ```
 
+**Windows:** Download from [ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH.
+
 ---
 
-## 📂 Estrutura do Projeto
+## Project structure
 
 ```
 .
-├── main.py      # Script principal com menu interativo
-└── readme.md    # Documentação do projeto
+├── main.py      # Main script with interactive menu
+├── readme.md    # This documentation
+└── notes.txt    # Optional local notes
 ```
 
 ---
 
-## ▶️ Como Executar
+## How to run
 
 ```bash
-python3 main.py
+python main.py
+```
+
+On Windows (if `python` is not in PATH):
+
+```bash
+py main.py
 ```
 
 ---
 
-## 📜 Menu de Opções
+## Menu options
 
-Ao iniciar o script, você verá:
+When you start the script you will see:
 
 ```
 === YouTube Downloader ===
-[1] Baixar vídeo (.mp4)
-[2] Baixar áudio (.mp3)
-[3] Baixar playlist de vídeos (.mp4)
-[4] Baixar playlist de áudios (.mp3)
-[5] Baixar apenas as legendas
-[6] Sair
+[1] Download video (.mp4)
+[2] Download audio (.mp3)
+[3] Download playlist (videos, .mp4)
+[4] Download playlist (audio, .mp3)
+[5] Download subtitles only
+[6] Exit
 ```
 
-Você escolhe uma opção, fornece a URL do vídeo ou playlist, e informa (ou confirma) o diretório de destino.
+You choose an option, enter the video or playlist URL, then enter (or confirm) the output folder.
 
-Observações sobre o diretório de destino:
-- Se você apenas pressionar Enter na pergunta do caminho, os downloads irão para `/home/cleverson/Downloads` (padrão atual no código).
-- Se o caminho informado não existir, ele será criado automaticamente.
+**Output folder:**
+
+- If you press Enter without typing a path, the default is `~/Downloads` (change this in the code if needed).
+- If the path does not exist, it is created automatically.
 
 ---
 
-## 📝 Detalhes das Opções
+## Option details
 
-### `[1] Baixar vídeo (.mp4)`
-
-* Faz o download do vídeo em alta qualidade (vídeo + áudio).
-* Salva como `.mp4` usando `ffmpeg` para mesclar.
-
-### `[2] Baixar áudio (.mp3)`
-
-* Extrai apenas o áudio do vídeo.
-* Converte para `.mp3` via `ffmpeg`.
-
-### `[3] Baixar playlist de vídeos`
-
-* Baixa todos os vídeos da playlist.
-* Os arquivos são organizados por pasta com título da playlist.
-
-### `[4] Baixar playlist de áudios`
-
-* Extrai apenas os áudios de toda a playlist.
-* Salva como `.mp3`.
-
-### `[5] Baixar apenas as legendas`
-
-* Permite selecionar o idioma (ex: `pt`, `en`, `es`).
-* Escolher entre legenda **manual** ou **automática**.
-* Salva como `.srt`.
+| Option | Description |
+|--------|-------------|
+| **[1] Video** | Downloads best video+audio and merges to `.mp4`. |
+| **[2] Audio** | Extracts audio and converts to `.mp3` (192 kbps). |
+| **[3] Playlist (video)** | Downloads all videos in the playlist into a folder named after the playlist. |
+| **[4] Playlist (audio)** | Same as above but audio only (`.mp3`). |
+| **[5] Subtitles only** | Lets you pick language and manual vs automatic subtitles (`.srt`). |
 
 ---
 
-## 📦 Exemplos de Uso
+## Example usage
 
-### Baixar legenda automática em português:
-
-```
-Escolha: 5
-URL: https://www.youtube.com/watch?v=O2onA5sHZgI
-Idioma: pt
-Usar legenda automática? s
-```
-
-### Baixar playlist de áudios:
+**Download automatic subtitles in English:**
 
 ```
-Escolha: 4
-URL: https://www.youtube.com/playlist?list=...
+Choose an option [1-6]: 5
+Enter video or playlist URL: https://www.youtube.com/watch?v=...
+Enter output folder name: subtitles
+Enter subtitle language code (e.g. en, pt): en
+Use automatic subtitles? [y/N]: y
+```
+
+**Download a playlist as audio:**
+
+```
+Choose an option [1-6]: 4
+Enter video or playlist URL: https://www.youtube.com/playlist?list=...
+Enter output folder name: my_music
 ```
 
 ---
 
-## 📁 Organização dos arquivos
+## File naming
 
-* Arquivos de vídeo ou áudio são salvos com o nome do título do vídeo.
-* Playlists são salvas em pastas nomeadas com o título da playlist.
-* Legendas são salvas como `titulo-do-video.srt`.
-
----
-
-## 🔒 Permissões
-
-Certifique-se de ter permissões de gravação no diretório de destino escolhido.
+- Single video/audio: filename is the video title.
+- Playlists: files go into a folder named after the playlist; each file is numbered (e.g. `1 - Title.mp4`).
+- Subtitles: `video-title.srt`.
 
 ---
 
-## 💡 Expansões Futuras (sugestões)
+## Permissions
 
-* Interface gráfica com Tkinter ou PyQt
-* Conversão de `.srt` para `.txt`
-* Embutir legenda no vídeo com `ffmpeg`
-* Suporte a múltiplas plataformas (Vimeo, TikTok, etc.)
-* Exportar metadados em `.json` ou `.csv`
-* Automatizar download de novos vídeos de um canal (RSS/watch later)
+Ensure you have write permission in the output directory you choose.
 
 ---
 
-## 👨‍💻 Autor
+## YouTube / yt-dlp notes
 
-**Cleverson**
-DevOps Engineer | Automação | Observabilidade | Cloud OCI
+- If you get **403** or **“format not available”**, update yt-dlp: `py -m pip install -U yt-dlp`.
+- Optionally use **browser cookies** (e.g. Chrome) for age-restricted or region-locked videos; this would require adding cookie support in the script (see yt-dlp docs for `--cookies-from-browser`).
+
+---
+
+## Possible future improvements
+
+- GUI (e.g. Tkinter or PyQt)
+- Convert `.srt` to `.txt`
+- Burn subtitles into video with ffmpeg
+- Support other sites (Vimeo, TikTok, etc.)
+- Export metadata to JSON/CSV
+- Automate downloads (e.g. RSS or “watch later” queue)
+
+---
+
+## License / author
+
+Free to use and modify. Original author: Cleverson — DevOps Engineer.

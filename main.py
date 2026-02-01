@@ -1,43 +1,28 @@
+"""
+YouTube Downloader CLI
+Downloads videos, audio, playlists, and subtitles from YouTube using yt-dlp.
+"""
+
 import yt_dlp
 import os
-import subprocess
 
-# Evita 403 no YouTube: prioriza clientes com URLs diretas (android/tv) em vez de SABR (web)
+# Avoid 403 on YouTube: prefer clients with direct URLs (android/tv) instead of SABR (web)
 EXTRACTOR_ARGS_YOUTUBE = {'youtube': {'player_client': ['android', 'tv_embedded', 'tv']}}
 
-def escolher_caminho():
-    caminho = input("Dê um nome para a pasta de destino: ").strip() # Enter para padrão
-    if not caminho:
-        caminho = os.path.expanduser("/home/cleverson/Downloads") # Diretório padrão. Altere para o seu.
-    if not os.path.exists(caminho):
-        print(f"O caminho '{caminho}' não existe. Criando...")
-        os.makedirs(caminho)
-    return caminho
 
-def baixar_conteudo(comando_base, url, usar_cookies=False, navegador='chrome'):
-    comando = comando_base.copy()
-    if usar_cookies:
-        comando = ['yt-dlp', '--cookies-from-browser', navegador] + comando_base[1:]
-    comando.append(url)
-    subprocess.run(comando)
+def choose_output_path():
+    """Prompt for output directory; create it if it does not exist."""
+    path = input("Enter output folder name: ").strip()
+    if not path:
+        path = os.path.expanduser("~/Downloads")  # Default; change to your path.
+    if not os.path.exists(path):
+        print(f"Path '{path}' does not exist. Creating...")
+        os.makedirs(path)
+    return path
 
-def solicitar_cookies():
-    resp = input("Usar cookies do navegador para autenticação? (s/N): ").strip().lower()
-    return resp == 's'
 
-def baixar_video(url):
-    usar_cookies = solicitar_cookies()
-    baixar_conteudo(['yt-dlp', '-f', 'bestvideo+bestaudio'], url, usar_cookies)
-
-def baixar_audio(url):
-    usar_cookies = solicitar_cookies()
-    baixar_conteudo(['yt-dlp', '-x', '--audio-format', 'mp3'], url, usar_cookies)
-
-def baixar_legenda(url):
-    usar_cookies = solicitar_cookies()
-    baixar_conteudo(['yt-dlp', '--write-auto-sub', '--skip-download'], url, usar_cookies)
-
-def baixar_video(url, output_path):
+def download_video(url, output_path):
+    """Download a single video as MP4 (best video+audio, merged)."""
     ydl_opts = {
         'outtmpl': f'{output_path}/%(title)s.%(ext)s',
         'format': 'bestvideo+bestaudio/best',
@@ -48,7 +33,9 @@ def baixar_video(url, output_path):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
-def baixar_audio(url, output_path):
+
+def download_audio(url, output_path):
+    """Download audio only as MP3."""
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': f'{output_path}/%(title)s.%(ext)s',
@@ -63,8 +50,10 @@ def baixar_audio(url, output_path):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
-def baixar_playlist(url, output_path, modo):
-    if modo == 'video':
+
+def download_playlist(url, output_path, mode):
+    """Download a full playlist as video (MP4) or audio (MP3)."""
+    if mode == 'video':
         ydl_opts = {
             'outtmpl': f'{output_path}/%(playlist_title)s/%(playlist_index)s - %(title)s.%(ext)s',
             'format': 'bestvideo+bestaudio/best',
@@ -89,16 +78,18 @@ def baixar_playlist(url, output_path, modo):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
-def baixar_legendas(url, output_path):
-    idioma = input("Digite o código do idioma da legenda (ex: pt, en): ").strip() or 'pt'
-    usar_auto = input("Usar legenda automática? [s/N]: ").strip().lower()
-    auto_sub = True if usar_auto == 's' else False
+
+def download_subtitles_only(url, output_path):
+    """Download subtitles only (manual or auto) in the chosen language."""
+    lang = input("Enter subtitle language code (e.g. en, pt): ").strip() or 'en'
+    use_auto = input("Use automatic subtitles? [y/N]: ").strip().lower()
+    auto_sub = use_auto in ('y', 's')
 
     ydl_opts = {
         'skip_download': True,
         'writesubtitles': not auto_sub,
         'writeautomaticsub': auto_sub,
-        'subtitleslangs': [idioma],
+        'subtitleslangs': [lang],
         'subtitlesformat': 'srt',
         'outtmpl': f'{output_path}/%(title)s.%(ext)s',
         'quiet': False,
@@ -107,42 +98,45 @@ def baixar_legendas(url, output_path):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            print(f"\nBaixando apenas legenda ({'automática' if auto_sub else 'manual'}) em '{idioma}'...")
+            print(f"\nDownloading subtitles only ({'auto' if auto_sub else 'manual'}) in '{lang}'...")
             ydl.download([url])
-            print("\n✅ Legenda baixada com sucesso!")
+            print("\n[OK] Subtitles downloaded successfully.")
     except Exception as e:
-        print(f"\n❌ Erro ao baixar legenda: {e}")
+        print(f"\n[ERROR] Failed to download subtitles: {e}")
 
-def menu():
+
+def print_menu():
+    """Print the main menu."""
     print("\n=== YouTube Downloader ===")
-    print("[1] Baixar vídeo (.mp4)")
-    print("[2] Baixar áudio (.mp3)")
-    print("[3] Baixar playlist de vídeos (.mp4)")
-    print("[4] Baixar playlist de áudios (.mp3)")
-    print("[5] Baixar apenas as legendas")
-    print("[6] Sair")
+    print("[1] Download video (.mp4)")
+    print("[2] Download audio (.mp3)")
+    print("[3] Download playlist (videos, .mp4)")
+    print("[4] Download playlist (audio, .mp3)")
+    print("[5] Download subtitles only")
+    print("[6] Exit")
+
 
 if __name__ == "__main__":
     while True:
-        menu()
-        escolha = input("Escolha uma opção [1-6]: ").strip()
+        print_menu()
+        choice = input("Choose an option [1-6]: ").strip()
 
-        if escolha == '6':
-            print("Encerrando.")
+        if choice == '6':
+            print("Exiting.")
             break
 
-        url = input("Digite a URL do vídeo ou playlist: ").strip()
-        caminho = escolher_caminho()
+        url = input("Enter video or playlist URL: ").strip()
+        output_path = choose_output_path()
 
-        if escolha == '1':
-            baixar_video(url, caminho)
-        elif escolha == '2':
-            baixar_audio(url, caminho)
-        elif escolha == '3':
-            baixar_playlist(url, caminho, modo='video')
-        elif escolha == '4':
-            baixar_playlist(url, caminho, modo='audio')
-        elif escolha == '5':
-            baixar_legendas(url, caminho)
+        if choice == '1':
+            download_video(url, output_path)
+        elif choice == '2':
+            download_audio(url, output_path)
+        elif choice == '3':
+            download_playlist(url, output_path, mode='video')
+        elif choice == '4':
+            download_playlist(url, output_path, mode='audio')
+        elif choice == '5':
+            download_subtitles_only(url, output_path)
         else:
-            print("❌ Opção inválida.")
+            print("[ERROR] Invalid option.")
