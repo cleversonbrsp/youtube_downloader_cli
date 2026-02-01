@@ -2,6 +2,9 @@ import yt_dlp
 import os
 import subprocess
 
+# Evita 403 no YouTube: prioriza clientes com URLs diretas (android/tv) em vez de SABR (web)
+EXTRACTOR_ARGS_YOUTUBE = {'youtube': {'player_client': ['android', 'tv_embedded', 'tv']}}
+
 def escolher_caminho():
     caminho = input("Dê um nome para a pasta de destino: ").strip() # Enter para padrão
     if not caminho:
@@ -39,7 +42,8 @@ def baixar_video(url, output_path):
         'outtmpl': f'{output_path}/%(title)s.%(ext)s',
         'format': 'bestvideo+bestaudio/best',
         'merge_output_format': 'mp4',
-        'quiet': False
+        'quiet': False,
+        'extractor_args': EXTRACTOR_ARGS_YOUTUBE,
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
@@ -53,7 +57,8 @@ def baixar_audio(url, output_path):
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
-        'quiet': False
+        'quiet': False,
+        'extractor_args': EXTRACTOR_ARGS_YOUTUBE,
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
@@ -65,7 +70,8 @@ def baixar_playlist(url, output_path, modo):
             'format': 'bestvideo+bestaudio/best',
             'merge_output_format': 'mp4',
             'quiet': False,
-            'yes_playlist': True
+            'yes_playlist': True,
+            'extractor_args': EXTRACTOR_ARGS_YOUTUBE,
         }
     else:
         ydl_opts = {
@@ -77,7 +83,8 @@ def baixar_playlist(url, output_path, modo):
                 'preferredquality': '192',
             }],
             'quiet': False,
-            'yes_playlist': True
+            'yes_playlist': True,
+            'extractor_args': EXTRACTOR_ARGS_YOUTUBE,
         }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
@@ -94,7 +101,8 @@ def baixar_legendas(url, output_path):
         'subtitleslangs': [idioma],
         'subtitlesformat': 'srt',
         'outtmpl': f'{output_path}/%(title)s.%(ext)s',
-        'quiet': False
+        'quiet': False,
+        'extractor_args': EXTRACTOR_ARGS_YOUTUBE,
     }
 
     try:
