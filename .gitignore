@@ -1,1 +1,40 @@
 notes.txt
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables / secrets
+.env
+.env.*
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local tools / Cursor
+.cursor/
+
+# Downloaded media and subtitles
+*.mp4
+*.mkv
+*.webm
+*.mp3
+*.m4a
+*.opus
+*.srt
+*.vtt
+
+# yt-dlp artifacts
+*.part
+*.temp
+*.ytdl

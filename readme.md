@@ -19,7 +19,8 @@ This Python script provides an interactive command-line interface to download **
 ## Requirements
 
 - **Python 3.7+**
-- **yt-dlp:** `pip install yt-dlp` (or `py -m pip install yt-dlp` on Windows)
+- **yt-dlp:** `pip install -U "yt-dlp[default]"` (or `py -m pip install -U "yt-dlp[default]"` on Windows)  
+  This installs yt-dlp with the recommended EJS scripts package (`yt-dlp-ejs`) for solving YouTube JS challenges.
 - **ffmpeg** (for merging video+audio and converting to MP3)
 
 ### Installing ffmpeg
@@ -97,19 +98,33 @@ You choose an option, enter the video or playlist URL, then enter (or confirm) t
 | **[2] Audio** | Extracts audio and converts to `.mp3` (192 kbps). |
 | **[3] Playlist (video)** | Downloads all videos in the playlist into a folder named after the playlist. |
 | **[4] Playlist (audio)** | Same as above but audio only (`.mp3`). |
-| **[5] Subtitles only** | Lets you pick language and manual vs automatic subtitles (`.srt`). |
+| **[5] Subtitles only** | Lets you pick language (via menu) and manual vs automatic subtitles (`.srt`). |
 
 ---
 
 ## Example usage
 
-**Download automatic subtitles in English:**
+### Download automatic subtitles (with browser cookies)
 
 ```
 Choose an option [1-6]: 5
 Enter video or playlist URL: https://www.youtube.com/watch?v=...
 Enter output folder name: subtitles
-Enter subtitle language code (e.g. en, pt): en
+Use browser cookies for authentication? (needed for private/age-restricted videos) [y/N]: y
+
+Select browser for cookies:
+[1] Chrome
+[2] Firefox
+[3] Brave
+[4] Edge
+Choose an option [1-4, default 1]: 2
+
+Select subtitle language:
+[1] pt-BR
+[2] en
+[3] es
+[4] other (type code manually)
+Choose an option [1-4, default 1]: 2
 Use automatic subtitles? [y/N]: y
 ```
 
@@ -139,8 +154,10 @@ Ensure you have write permission in the output directory you choose.
 
 ## YouTube / yt-dlp notes
 
-- If you get **403** or **“format not available”**, update yt-dlp: `py -m pip install -U yt-dlp`.
-- Optionally use **browser cookies** (e.g. Chrome) for age-restricted or region-locked videos; this would require adding cookie support in the script (see yt-dlp docs for `--cookies-from-browser`).
+- If you get **403**, **“format not available”**, or **JS challenge / EJS warnings**, update yt-dlp: `pip install -U "yt-dlp[default]"`.
+- The script already supports using **browser cookies** via yt-dlp’s `cookiesfrombrowser` option.  
+  - On each run, you can choose to use cookies and select the browser (Chrome, Firefox, Brave, Edge).  
+  - This is recommended for **private**, **age-restricted** or **Premium-only** videos.
 
 ---
 
