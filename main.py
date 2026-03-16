@@ -71,7 +71,6 @@ def download_video(url, output_path, cookiesfrombrowser=None):
         'merge_output_format': 'mp4',
         'quiet': False,
         'extractor_args': EXTRACTOR_ARGS_YOUTUBE,
-        'js_runtimes': {'node': None},
     }
     if cookiesfrombrowser is not None:
         ydl_opts['cookiesfrombrowser'] = cookiesfrombrowser
@@ -91,7 +90,6 @@ def download_audio(url, output_path, cookiesfrombrowser=None):
         }],
         'quiet': False,
         'extractor_args': EXTRACTOR_ARGS_YOUTUBE,
-        'js_runtimes': {'node': None},
     }
     if cookiesfrombrowser is not None:
         ydl_opts['cookiesfrombrowser'] = cookiesfrombrowser
@@ -109,7 +107,6 @@ def download_playlist(url, output_path, mode, cookiesfrombrowser=None):
             'quiet': False,
             'yes_playlist': True,
             'extractor_args': EXTRACTOR_ARGS_YOUTUBE,
-            'js_runtimes': {'node': None},
         }
     else:
         ydl_opts = {
@@ -123,7 +120,6 @@ def download_playlist(url, output_path, mode, cookiesfrombrowser=None):
             'quiet': False,
             'yes_playlist': True,
             'extractor_args': EXTRACTOR_ARGS_YOUTUBE,
-            'js_runtimes': {'node': None},
         }
     if cookiesfrombrowser is not None:
         ydl_opts['cookiesfrombrowser'] = cookiesfrombrowser
