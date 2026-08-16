@@ -17,7 +17,7 @@ import tempfile
 import threading
 import time
 import zipfile
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -51,6 +51,9 @@ class JobRecord:
     started: str | None
     finished: str | None
     error: str | None
+    # Itens de playlist pulados (id + motivo amigável). default_factory pra job.json antigo
+    # (de antes desse campo existir) continuar carregando sem quebrar.
+    skipped: list[dict[str, str | None]] = field(default_factory=list)
 
     def to_json(self) -> dict[str, Any]:
         return asdict(self)
@@ -143,8 +146,9 @@ def _execute(job_id: str, params: dict[str, Any]) -> None:
 
     cookiefile = params.pop("cookiefile", None)
     status, error = "completed", None
+    skipped: list[dict[str, str | None]] = []
     try:
-        run_job(output_dir=downloads_dir, log_path=log_path, cookiefile=cookiefile, **params)
+        skipped = run_job(output_dir=downloads_dir, log_path=log_path, cookiefile=cookiefile, **params)
     except DownloadError as e:
         status, error = "failed", str(e)
     except Exception as e:  # noqa: BLE001 — nunca deixar a thread morrer sem atualizar o job.json
@@ -155,6 +159,7 @@ def _execute(job_id: str, params: dict[str, Any]) -> None:
         return
     rec.status = status
     rec.error = error
+    rec.skipped = skipped
     rec.finished = _utc_now()
     _write_record(job_id, rec)
 

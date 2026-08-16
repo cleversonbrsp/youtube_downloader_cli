@@ -8,6 +8,7 @@ do formulário web, e as mensagens do yt-dlp vão para um arquivo de log por job
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -39,11 +40,51 @@ class DownloadError(RuntimeError):
     """Erro esperado (URL inválida, formato indisponível, bloqueio anti-bot) — mensagem amigável."""
 
 
+# Linha típica que o yt-dlp manda pro logger quando um item de playlist falha, ex.:
+# "ERROR: [youtube] Ss0kFNUP4P4: Video unavailable. It was removed following a copyright
+# removal request by SME" — capturamos o id do vídeo e o motivo cru pra traduzir depois.
+_ITEM_ERROR_RE = re.compile(r"^(?:ERROR:\s*)?\[youtube\]\s+([A-Za-z0-9_-]{11}):\s*(.+)$")
+# "[youtube:tab] YouTube said: INFO - 10 unavailable videos are hidden" — vídeos que o próprio
+# YouTube já tira da listagem da playlist antes do yt-dlp tentar baixar (sem id individual).
+_HIDDEN_COUNT_RE = re.compile(r"(\d+)\s+unavailable videos are hidden")
+
+
+def _friendly_reason(raw: str) -> str:
+    """Traduz o motivo cru do yt-dlp pra uma frase que explica pro usuário por que não baixou."""
+    low = raw.lower()
+    if "copyright removal request" in low:
+        m = re.search(r"\bby ([A-Za-z0-9 .&-]+?)\.?$", raw)
+        quem = m.group(1).strip() if m else None
+        return (
+            f"Removido do YouTube por reclamação de direitos autorais de {quem}."
+            if quem
+            else "Removido do YouTube por reclamação de direitos autorais."
+        )
+    if "private video" in low:
+        return "Vídeo privado — o dono não deixou público."
+    if "account associated with this video has been terminated" in low:
+        return "O canal foi encerrado pelo YouTube."
+    if "removed by the uploader" in low:
+        return "Removido pelo próprio autor do vídeo."
+    if "not available in your country" in low or "blocked it in your country" in low:
+        return "Bloqueado por região — indisponível a partir do seu país."
+    if "members-only" in low or "join this channel" in low:
+        return "Conteúdo exclusivo para membros do canal (assinatura paga)."
+    if "sign in to confirm your age" in low or ("age" in low and "confirm" in low):
+        return "Restrito por idade — envie um cookies.txt (usuário logado) e tente de novo."
+    if "video unavailable" in low:
+        return "Vídeo indisponível no YouTube (removido ou nunca existiu)."
+    return raw
+
+
 class _JobLogger:
     """Recebe as mensagens do yt-dlp (objeto `logger`) e grava num arquivo de log por job."""
 
     def __init__(self, log_path: Path) -> None:
         self._log_path = log_path
+        self.skipped: list[dict[str, str | None]] = []
+        self.hidden_count = 0
+        self._seen_ids: set[str] = set()
 
     def _write(self, level: str, msg: str) -> None:
         try:
@@ -62,9 +103,18 @@ class _JobLogger:
 
     def warning(self, msg: str) -> None:
         self._write("warn", msg)
+        m = _HIDDEN_COUNT_RE.search(msg)
+        if m:
+            self.hidden_count = max(self.hidden_count, int(m.group(1)))
 
     def error(self, msg: str) -> None:
         self._write("error", msg)
+        m = _ITEM_ERROR_RE.match(msg.strip())
+        if m:
+            video_id, reason = m.group(1), m.group(2)
+            if video_id not in self._seen_ids:
+                self._seen_ids.add(video_id)
+                self.skipped.append({"id": video_id, "reason": _friendly_reason(reason)})
 
 
 def _progress_hook(log_path: Path):
@@ -108,7 +158,9 @@ def _base_opts(log_path: Path, cookiefile: Path | None) -> dict[str, Any]:
     return opts
 
 
-def download_video(url: str, output_dir: Path, log_path: Path, cookiefile: Path | None = None) -> None:
+def download_video(
+    url: str, output_dir: Path, log_path: Path, cookiefile: Path | None = None
+) -> list[dict[str, str | None]]:
     """Baixa vídeo único, melhor vídeo+áudio, mesclado em .mp4."""
     opts = _base_opts(log_path, cookiefile)
     opts.update(
@@ -118,10 +170,12 @@ def download_video(url: str, output_dir: Path, log_path: Path, cookiefile: Path 
             "merge_output_format": "mp4",
         }
     )
-    _run(url, opts)
+    return _run(url, opts)
 
 
-def download_audio(url: str, output_dir: Path, log_path: Path, cookiefile: Path | None = None) -> None:
+def download_audio(
+    url: str, output_dir: Path, log_path: Path, cookiefile: Path | None = None
+) -> list[dict[str, str | None]]:
     """Baixa só o áudio, convertido para .mp3 (192 kbps)."""
     opts = _base_opts(log_path, cookiefile)
     opts.update(
@@ -133,7 +187,7 @@ def download_audio(url: str, output_dir: Path, log_path: Path, cookiefile: Path 
             ],
         }
     )
-    _run(url, opts)
+    return _run(url, opts)
 
 
 def download_playlist(
@@ -142,7 +196,7 @@ def download_playlist(
     log_path: Path,
     mode: str,
     cookiefile: Path | None = None,
-) -> None:
+) -> list[dict[str, str | None]]:
     """Baixa uma playlist inteira como vídeo (.mp4) ou áudio (.mp3), um arquivo numerado por item."""
     opts = _base_opts(log_path, cookiefile)
     opts["noplaylist"] = False
@@ -162,7 +216,7 @@ def download_playlist(
                 ],
             }
         )
-    _run(url, opts)
+    return _run(url, opts)
 
 
 def download_subtitles(
@@ -172,7 +226,7 @@ def download_subtitles(
     lang: str,
     auto: bool,
     cookiefile: Path | None = None,
-) -> None:
+) -> list[dict[str, str | None]]:
     """Baixa só as legendas (manuais ou automáticas) no idioma escolhido, em .srt."""
     opts = _base_opts(log_path, cookiefile)
     opts.update(
@@ -188,10 +242,11 @@ def download_subtitles(
             "ignore_no_formats_error": True,
         }
     )
-    _run(url, opts)
+    return _run(url, opts)
 
 
-def _run(url: str, opts: dict[str, Any]) -> None:
+def _run(url: str, opts: dict[str, Any]) -> list[dict[str, str | None]]:
+    logger: _JobLogger = opts["logger"]
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([url])
@@ -205,6 +260,19 @@ def _run(url: str, opts: dict[str, Any]) -> None:
             ) from exc
         raise DownloadError(f"Falha ao baixar: {msg}") from exc
 
+    skipped = list(logger.skipped)
+    if logger.hidden_count:
+        skipped.append(
+            {
+                "id": None,
+                "reason": (
+                    f"{logger.hidden_count} vídeo(s) da playlist já apareciam como indisponíveis "
+                    "(removidos/privados) pro próprio YouTube antes mesmo do download começar."
+                ),
+            }
+        )
+    return skipped
+
 
 def run_job(
     *,
@@ -215,20 +283,24 @@ def run_job(
     sub_lang: str = "pt",
     sub_auto: bool = False,
     cookiefile: Path | None = None,
-) -> None:
-    """Ponto único de entrada usado por jobs.py. Levanta DownloadError com mensagem amigável."""
+) -> list[dict[str, str | None]]:
+    """Ponto único de entrada usado por jobs.py. Levanta DownloadError com mensagem amigável.
+
+    Retorna a lista de itens de playlist pulados (id + motivo amigável), vazia fora do modo
+    playlist ou quando nada foi pulado.
+    """
     if mode not in VALID_MODES:
         raise DownloadError(f"Modo de download inválido: {mode}")
     if not url.strip():
         raise DownloadError("Informe a URL do vídeo ou playlist.")
 
     if mode == "video":
-        download_video(url, output_dir, log_path, cookiefile)
+        return download_video(url, output_dir, log_path, cookiefile)
     elif mode == "audio":
-        download_audio(url, output_dir, log_path, cookiefile)
+        return download_audio(url, output_dir, log_path, cookiefile)
     elif mode == "playlist_video":
-        download_playlist(url, output_dir, log_path, "video", cookiefile)
+        return download_playlist(url, output_dir, log_path, "video", cookiefile)
     elif mode == "playlist_audio":
-        download_playlist(url, output_dir, log_path, "audio", cookiefile)
-    elif mode == "subtitles":
-        download_subtitles(url, output_dir, log_path, sub_lang, sub_auto, cookiefile)
+        return download_playlist(url, output_dir, log_path, "audio", cookiefile)
+    else:
+        return download_subtitles(url, output_dir, log_path, sub_lang, sub_auto, cookiefile)

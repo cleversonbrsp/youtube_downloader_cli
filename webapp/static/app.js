@@ -75,6 +75,8 @@
   var filesWrap = document.getElementById("job-files-wrap");
   var filesList = document.getElementById("job-files");
   var zipLink = document.getElementById("job-zip-link");
+  var skippedWrap = document.getElementById("job-skipped-wrap");
+  var skippedList = document.getElementById("job-skipped");
   var jobFormError = document.getElementById("job-form-error");
   var jobFormErrorMsg = document.getElementById("job-form-error-msg");
   var jobFormErrorDismiss = document.getElementById("job-form-error-dismiss");
@@ -223,6 +225,29 @@
     }
   }
 
+  function renderSkipped(skipped) {
+    if (!skippedList || !skippedWrap) return;
+    skippedList.innerHTML = "";
+    if (!skipped || skipped.length === 0) {
+      skippedWrap.classList.add("hidden");
+      return;
+    }
+    skippedWrap.classList.remove("hidden");
+    skipped.forEach(function (s) {
+      var li = document.createElement("li");
+      li.className = "skipped-row";
+      var badge = document.createElement("span");
+      badge.className = "skipped-id";
+      badge.textContent = s.id || "Aviso";
+      var reason = document.createElement("span");
+      reason.className = "skipped-reason";
+      reason.textContent = s.reason;
+      li.appendChild(badge);
+      li.appendChild(reason);
+      skippedList.appendChild(li);
+    });
+  }
+
   function pollJob(id, token) {
     var url = "/api/jobs/" + encodeURIComponent(id) + "?token=" + encodeURIComponent(token);
     fetch(url, { headers: { Accept: "application/json" } })
@@ -238,6 +263,7 @@
         logBox.textContent = data.log || "(aguardando saída…)";
         logBox.scrollTop = logBox.scrollHeight;
         renderFiles(data.id, token, data.files);
+        renderSkipped(data.skipped);
         if (data.status === "completed" || data.status === "failed") {
           if (pollTimer) clearInterval(pollTimer);
           pollTimer = null;
@@ -294,6 +320,7 @@
         setStatus(data.status || "queued");
         logBox.textContent = "Aguardando saída…";
         if (filesWrap) filesWrap.classList.add("hidden");
+        if (skippedWrap) skippedWrap.classList.add("hidden");
         if (pollTimer) clearInterval(pollTimer);
         pollJob(data.id, data.token);
         pollTimer = setInterval(function () {

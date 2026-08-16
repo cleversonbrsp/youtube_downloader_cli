@@ -115,6 +115,7 @@ def api_jobs_status(job_id: str):
             "started": rec.started,
             "finished": rec.finished,
             "error": rec.error,
+            "skipped": rec.skipped,
             "log": read_log_tail(job_id),
             "files": list_job_files(job_id),
         }
