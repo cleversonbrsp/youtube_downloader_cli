@@ -147,6 +147,9 @@ def download_playlist(
     opts = _base_opts(log_path, cookiefile)
     opts["noplaylist"] = False
     opts["yes_playlist"] = True
+    # Sem isso, um único item indisponível (removido, privado, etc.) aborta a playlist
+    # inteira em vez de pular pro próximo — equivalente a `-i`/`--ignore-errors` do yt-dlp.
+    opts["ignoreerrors"] = True
     opts["outtmpl"] = str(output_dir / "%(playlist_index)s - %(title).150B [%(id)s].%(ext)s")
     if mode == "video":
         opts.update({"format": "bestvideo+bestaudio/best", "merge_output_format": "mp4"})
