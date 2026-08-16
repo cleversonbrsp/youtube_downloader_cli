@@ -1,4 +1,18 @@
 (function () {
+  // Dentro da janela nativa (pywebview/WebView2), um <a href> para um arquivo não abre o
+  // diálogo "Salvar como" do Windows sozinho — por isso os botões de download chamam a API
+  // Python exposta (window.pywebview.api.*) quando disponível. Rodando num navegador comum
+  // (modo de contingência do launcher.py, sem WebView2), isso fica indisponível e os links
+  // funcionam do jeito normal do navegador.
+  var pywebviewReady = false;
+  window.addEventListener("pywebviewready", function () {
+    pywebviewReady = true;
+  });
+
+  function hasNativeApi() {
+    return pywebviewReady && window.pywebview && window.pywebview.api;
+  }
+
   var themeToggle = document.getElementById("theme-toggle");
   if (themeToggle) {
     themeToggle.addEventListener("click", function () {
@@ -115,6 +129,30 @@
     return v.toFixed(v >= 10 || i === 0 ? 0 : 1) + " " + units[i];
   }
 
+  function saveViaNativeApi(button, apiCall, busyText) {
+    var originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = busyText;
+    apiCall()
+      .then(function (result) {
+        button.disabled = false;
+        if (result && result.ok) {
+          button.textContent = "Salvo em: " + result.path.split(/[\\/]/).pop();
+          setTimeout(function () {
+            button.textContent = originalText;
+          }, 3000);
+        } else {
+          button.textContent = originalText;
+          if (result && result.error) setJobError(result.error);
+        }
+      })
+      .catch(function (e) {
+        button.disabled = false;
+        button.textContent = originalText;
+        setJobError(String(e.message || e));
+      });
+  }
+
   function renderFiles(id, token, files) {
     if (!filesList || !filesWrap) return;
     filesList.innerHTML = "";
@@ -131,19 +169,54 @@
       name.textContent = f.name;
       var right = document.createElement("span");
       right.className = "file-size";
-      var link = document.createElement("a");
-      link.className = "btn ghost sm";
-      link.textContent = "Baixar (" + humanSize(f.size) + ")";
-      link.href = "/jobs/" + encodeURIComponent(id) + "/files/" + encodeURIComponent(f.name) + "?token=" + encodeURIComponent(token);
-      right.appendChild(link);
+
+      if (hasNativeApi()) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn ghost sm";
+        btn.textContent = "Salvar (" + humanSize(f.size) + ")";
+        btn.addEventListener("click", function () {
+          saveViaNativeApi(
+            btn,
+            function () {
+              return window.pywebview.api.save_job_file(id, token, f.name);
+            },
+            "Salvando…"
+          );
+        });
+        right.appendChild(btn);
+      } else {
+        var link = document.createElement("a");
+        link.className = "btn ghost sm";
+        link.textContent = "Baixar (" + humanSize(f.size) + ")";
+        link.href = "/jobs/" + encodeURIComponent(id) + "/files/" + encodeURIComponent(f.name) + "?token=" + encodeURIComponent(token);
+        right.appendChild(link);
+      }
+
       li.appendChild(name);
       li.appendChild(right);
       filesList.appendChild(li);
     });
+
     if (zipLink) {
       if (files.length > 1) {
-        zipLink.href = "/jobs/" + encodeURIComponent(id) + "/zip?token=" + encodeURIComponent(token);
         zipLink.classList.remove("hidden");
+        if (hasNativeApi()) {
+          zipLink.removeAttribute("href");
+          zipLink.onclick = function (ev) {
+            ev.preventDefault();
+            saveViaNativeApi(
+              zipLink,
+              function () {
+                return window.pywebview.api.save_job_zip(id, token);
+              },
+              "Salvando…"
+            );
+          };
+        } else {
+          zipLink.onclick = null;
+          zipLink.href = "/jobs/" + encodeURIComponent(id) + "/zip?token=" + encodeURIComponent(token);
+        }
       } else {
         zipLink.classList.add("hidden");
       }

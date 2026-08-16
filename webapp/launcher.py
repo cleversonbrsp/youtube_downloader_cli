@@ -13,6 +13,7 @@ sem configuração extra.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import time
 import urllib.request
@@ -55,6 +56,72 @@ def _serve() -> None:
     serve(flask_app_module.app, host="127.0.0.1", port=PORT)
 
 
+class Api:
+    """Ponte JS -> Python exposta na janela (window.pywebview.api.*).
+
+    Existe porque, dentro do WebView2 embutido, um <a href> apontando para um arquivo com
+    Content-Disposition: attachment não dispara o diálogo "Salvar como" do Windows (funciona
+    num navegador normal, mas não aqui) — o clique simplesmente não faz nada. Em vez de
+    depender do navegador embutido para isso, o botão "Baixar" chama estes métodos, que abrem
+    o diálogo nativo de salvar e copiam o arquivo diretamente do disco (mesma máquina, sem
+    precisar passar pelo HTTP de novo).
+    """
+
+    def _save_path(self, job_id: str, token: str, filename: str):
+        import jobs
+
+        rec, err = jobs.get_job(job_id, token)
+        if err:
+            return None, err
+        path = jobs.resolve_job_file(job_id, filename)
+        if path is None:
+            return None, "Arquivo não encontrado."
+        return path, None
+
+    def save_job_file(self, job_id: str, token: str, filename: str) -> dict:
+        import webview
+
+        path, err = self._save_path(job_id, token, filename)
+        if err:
+            return {"ok": False, "error": err}
+
+        window = webview.windows[0]
+        result = window.create_file_dialog(webview.FileDialog.SAVE, save_filename=path.name)
+        if not result:
+            return {"ok": False, "error": None}  # usuário cancelou o diálogo
+
+        dest = result[0] if isinstance(result, (list, tuple)) else result
+        try:
+            shutil.copy2(path, dest)
+        except OSError as e:
+            return {"ok": False, "error": f"Não foi possível salvar: {e}"}
+        return {"ok": True, "path": str(dest)}
+
+    def save_job_zip(self, job_id: str, token: str) -> dict:
+        import webview
+
+        import jobs
+
+        rec, err = jobs.get_job(job_id, token)
+        if err:
+            return {"ok": False, "error": err}
+        zip_path = jobs.build_zip(job_id)
+        if zip_path is None:
+            return {"ok": False, "error": "Nenhum arquivo para compactar."}
+
+        window = webview.windows[0]
+        result = window.create_file_dialog(webview.FileDialog.SAVE, save_filename=f"tube-fetch-{job_id[:8]}.zip")
+        if not result:
+            return {"ok": False, "error": None}
+
+        dest = result[0] if isinstance(result, (list, tuple)) else result
+        try:
+            shutil.copy2(zip_path, dest)
+        except OSError as e:
+            return {"ok": False, "error": f"Não foi possível salvar: {e}"}
+        return {"ok": True, "path": str(dest)}
+
+
 def _wait_until_ready(timeout: float = 15.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -87,6 +154,7 @@ def main() -> None:
             height=860,
             min_size=(760, 560),
             text_select=True,
+            js_api=Api(),
         )
         # No Windows, força o WebView2 (Edge Chromium) — motor moderno, mesmo CSS/JS testado no
         # navegador. Sem o runtime do WebView2 instalado, isto levanta uma exceção tratada abaixo.
