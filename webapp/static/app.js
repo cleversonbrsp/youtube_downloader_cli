@@ -78,6 +78,7 @@
   var skippedWrap = document.getElementById("job-skipped-wrap");
   var skippedList = document.getElementById("job-skipped");
   var jobFilesDest = document.getElementById("job-files-dest");
+  var jobSuccessImg = document.getElementById("job-success-img");
   var destDirField = document.getElementById("dest-dir-field");
   var destDirDisplay = document.getElementById("dest-dir-display");
   var destDirValue = document.getElementById("dest-dir-value");
@@ -355,6 +356,7 @@
           submitBtn.disabled = false;
           if (data.status === "completed") {
             submitHint.textContent = "Concluído.";
+            if (jobSuccessImg) jobSuccessImg.classList.remove("hidden");
           } else {
             submitHint.textContent = data.error || "Falhou.";
             setJobError(data.error || "O download falhou.");
@@ -407,6 +409,7 @@
         if (filesWrap) filesWrap.classList.add("hidden");
         if (skippedWrap) skippedWrap.classList.add("hidden");
         if (jobFilesDest) jobFilesDest.classList.add("hidden");
+        if (jobSuccessImg) jobSuccessImg.classList.add("hidden");
         if (pollTimer) clearInterval(pollTimer);
         pollJob(data.id, data.token);
         pollTimer = setInterval(function () {

@@ -193,6 +193,12 @@
                 <code id="job-id" class="job-id"></code>
                 <span class="pill job-status-pill" id="job-status-pill" data-state="">—</span>
               </div>
+              <img
+                id="job-success-img"
+                class="job-success-img hidden"
+                src="{{ url_for('static', filename='img/galocego.webp') }}?v={{ static_version('img/galocego.webp') }}"
+                alt="Deu bom!"
+              />
               <pre class="log-box" id="job-log"></pre>
               <div id="job-files-wrap" class="job-files-wrap hidden">
                 <div class="job-files-header">

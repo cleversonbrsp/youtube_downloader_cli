@@ -850,6 +850,26 @@ main {
   font-weight: 500;
 }
 
+.job-success-img {
+  display: block;
+  max-width: 110px;
+  height: auto;
+  margin: 0.85rem auto 0;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28));
+  animation: pop-in 0.35s ease;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .job-files-dest {
   margin: -0.25rem 0 0.75rem;
   font-size: 0.82rem;
@@ -957,6 +977,10 @@ a.skipped-title:hover {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .job-success-img {
+    animation: none;
   }
 
   .btn:hover {
