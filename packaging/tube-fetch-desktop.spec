@@ -31,7 +31,13 @@ a = Analysis(  # noqa: F821
         (str(WEBAPP / "templates"), "templates"),
         (str(WEBAPP / "static"), "static"),
     ],
-    hiddenimports=["waitress"],
+    hiddenimports=[
+        "waitress",
+        "webview.platforms.edgechromium",
+        "webview.platforms.winforms",
+        "clr_loader",
+        "clr",
+    ],
     hookspath=[],
     excludes=[],
     noarchive=False,
@@ -44,7 +50,10 @@ exe = EXE(  # noqa: F821
     [],
     exclude_binaries=True,
     name="TubeFetchDesktop",
-    console=True,
+    # Sem janela de console: é um app com janela própria (pywebview), não um script de terminal.
+    # Erros de inicialização viram uma caixa de diálogo nativa (ver launcher.py), não texto no
+    # console — por isso console=False não esconde nenhuma mensagem importante do usuário.
+    console=False,
     icon=None,
 )
 

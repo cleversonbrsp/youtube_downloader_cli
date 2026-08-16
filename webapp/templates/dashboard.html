@@ -4,7 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Tube Fetch Desktop — baixe vídeo, áudio, playlist e legendas do YouTube, localmente." />
-    <title>Tube Fetch Desktop</title>
+    <title>Tube Fetch Desktop — por Cleverson Rodrigues</title>
+    <script>
+      // Aplica o tema salvo antes da primeira renderização, para não piscar o tema errado.
+      (function () {
+        try {
+          var saved = localStorage.getItem("tubefetch-theme");
+          var theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {
+          /* localStorage indisponível (ex.: modo restrito) — segue com o tema claro padrão. */
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -24,6 +36,10 @@
         <span class="brand-text">Tube Fetch Desktop</span>
       </a>
       <div class="top-meta top-meta-end">
+        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.5 12H2.1M21.9 12h-2.4M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7"/></svg>
+        </button>
         <span class="pill" id="svc-status" data-state="checking">Verificando…</span>
       </div>
     </header>
@@ -198,7 +214,7 @@
     <footer class="foot">
       <p>Tube Fetch Desktop</p>
       <p class="muted">Adaptado do youtube_downloader_cli</p>
-      <p class="muted">by Cleverson Rodrigues</p>
+      <p><strong>Desenvolvido por Cleverson Rodrigues</strong></p>
     </footer>
 
     <script src="{{ url_for('static', filename='app.js') }}?v={{ static_version('app.js') }}" defer></script>

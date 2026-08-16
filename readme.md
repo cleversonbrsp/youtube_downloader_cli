@@ -66,18 +66,23 @@ sudo dnf install ffmpeg
 
 ## Tube Fetch Desktop (Windows) {#tube-fetch-desktop-windows}
 
-A local, no-install-hassle graphical version of this CLI: same video/audio/playlist/subtitles
-features, in a clean web-based interface that opens in your browser — but everything runs on
-**your own machine**, packaged as a single Windows installer (Python, ffmpeg and the JS runtime
-needed by yt-dlp are all bundled in).
+A local, no-install-hassle graphical version of this CLI, **developed by Cleverson Rodrigues**:
+same video/audio/playlist/subtitles features, in a clean interface that opens in its **own
+application window** (not a browser tab) — but everything runs on **your own machine**, packaged
+as a single Windows installer (Python, ffmpeg and the JS runtime needed by yt-dlp are all bundled
+in). Includes a light/dark theme toggle (remembers your choice next time you open it).
 
 ### Install
 
 1. Go to the [**Releases**](../../releases) page of this repository.
 2. Download the latest `TubeFetchDesktop-Setup-*.exe`.
 3. Run it and follow the installer (Portuguese/English). A desktop shortcut is optional.
-4. Launch **Tube Fetch Desktop** — it opens `http://127.0.0.1:5000` in your default browser
-   automatically. Closing the black console window stops the local server.
+4. Launch **Tube Fetch Desktop** — its own window opens automatically (no console, no browser
+   tab). Closing the window stops the local server.
+
+The app window uses the **Edge WebView2** engine (already present on virtually all Windows
+10/11 installs via Windows Update). If it's somehow missing, Tube Fetch Desktop automatically
+falls back to opening your default browser instead — either way, the app keeps working.
 
 Because it runs from your own residential IP (not a cloud/datacenter IP), most videos download
 **without needing `cookies.txt`** — unlike a cloud-hosted deployment of the same tool, which
