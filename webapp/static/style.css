@@ -931,6 +931,11 @@ main {
   word-break: break-word;
 }
 
+/* Só os itens com link (a maioria) — deixa óbvio que dá pra clicar e ver o vídeo no YouTube. */
+a.skipped-title {
+  color: var(--accent);
+}
+
 a.skipped-title:hover {
   text-decoration: underline;
 }
