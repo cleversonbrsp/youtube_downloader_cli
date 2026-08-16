@@ -302,14 +302,33 @@
     skipped.forEach(function (s) {
       var li = document.createElement("li");
       li.className = "skipped-row";
+
       var badge = document.createElement("span");
       badge.className = "skipped-id";
-      badge.textContent = s.id || "Aviso";
+      badge.textContent = s.index ? "#" + s.index : "Aviso";
+      li.appendChild(badge);
+
+      var main = document.createElement("span");
+      main.className = "skipped-main";
+
+      if (s.title || s.id) {
+        var titleEl = document.createElement(s.url ? "a" : "span");
+        if (s.url) {
+          titleEl.href = s.url;
+          titleEl.target = "_blank";
+          titleEl.rel = "noopener";
+        }
+        titleEl.className = "skipped-title";
+        titleEl.textContent = s.title || s.id;
+        main.appendChild(titleEl);
+      }
+
       var reason = document.createElement("span");
       reason.className = "skipped-reason";
       reason.textContent = s.reason;
-      li.appendChild(badge);
-      li.appendChild(reason);
+      main.appendChild(reason);
+
+      li.appendChild(main);
       skippedList.appendChild(li);
     });
   }

@@ -53,7 +53,7 @@ class JobRecord:
     error: str | None
     # Itens de playlist pulados (id + motivo amigável). default_factory pra job.json antigo
     # (de antes desse campo existir) continuar carregando sem quebrar.
-    skipped: list[dict[str, str | None]] = field(default_factory=list)
+    skipped: list[dict[str, Any]] = field(default_factory=list)
     # Pasta escolhida pelo usuário (diálogo nativo do pywebview) pra baixar direto nela, sem
     # passar pela pasta efêmera do job. None = comportamento antigo (salvar arquivo a arquivo).
     dest_dir: str | None = None
@@ -157,7 +157,7 @@ def _execute(job_id: str, params: dict[str, Any]) -> None:
 
     cookiefile = params.pop("cookiefile", None)
     status, error = "completed", None
-    skipped: list[dict[str, str | None]] = []
+    skipped: list[dict[str, Any]] = []
     try:
         skipped = run_job(output_dir=downloads_dir, log_path=log_path, cookiefile=cookiefile, **params)
     except DownloadError as e:

@@ -82,9 +82,12 @@ class _JobLogger:
 
     def __init__(self, log_path: Path) -> None:
         self._log_path = log_path
-        self.skipped: list[dict[str, str | None]] = []
+        self.skipped: list[dict[str, Any]] = []
         self.hidden_count = 0
         self._seen_ids: set[str] = set()
+        # Preenchido por download_playlist() antes do download de verdade começar — a mensagem
+        # de erro do yt-dlp só traz o id do vídeo, não o título nem a posição na playlist.
+        self.playlist_index: dict[str, dict[str, Any]] = {}
 
     def _write(self, level: str, msg: str) -> None:
         try:
@@ -114,7 +117,16 @@ class _JobLogger:
             video_id, reason = m.group(1), m.group(2)
             if video_id not in self._seen_ids:
                 self._seen_ids.add(video_id)
-                self.skipped.append({"id": video_id, "reason": _friendly_reason(reason)})
+                meta = self.playlist_index.get(video_id, {})
+                self.skipped.append(
+                    {
+                        "id": video_id,
+                        "index": meta.get("index"),
+                        "title": meta.get("title"),
+                        "url": f"https://www.youtube.com/watch?v={video_id}",
+                        "reason": _friendly_reason(reason),
+                    }
+                )
 
 
 def _progress_hook(log_path: Path):
@@ -160,7 +172,7 @@ def _base_opts(log_path: Path, cookiefile: Path | None) -> dict[str, Any]:
 
 def download_video(
     url: str, output_dir: Path, log_path: Path, cookiefile: Path | None = None
-) -> list[dict[str, str | None]]:
+) -> list[dict[str, Any]]:
     """Baixa vídeo único, melhor vídeo+áudio, mesclado em .mp4."""
     opts = _base_opts(log_path, cookiefile)
     opts.update(
@@ -175,7 +187,7 @@ def download_video(
 
 def download_audio(
     url: str, output_dir: Path, log_path: Path, cookiefile: Path | None = None
-) -> list[dict[str, str | None]]:
+) -> list[dict[str, Any]]:
     """Baixa só o áudio, convertido para .mp3 (192 kbps)."""
     opts = _base_opts(log_path, cookiefile)
     opts.update(
@@ -190,14 +202,49 @@ def download_audio(
     return _run(url, opts)
 
 
+def _flat_playlist_index(url: str, cookiefile: Path | None) -> dict[str, dict[str, Any]]:
+    """Lista os itens da playlist sem baixar nada (extract_flat), só pra saber título e posição
+    de cada vídeo antes da tentativa real — a mensagem de erro do yt-dlp num item que falha só
+    traz o id, e nessa altura a extração completa (que traria o título) já não rolou.
+    Enriquecimento best-effort: qualquer falha aqui é engolida e os itens que falharem depois
+    ficam só com id/motivo, sem título/posição — nunca derruba o job por causa disso."""
+    opts: dict[str, Any] = {
+        "quiet": True,
+        "no_warnings": True,
+        "extract_flat": True,
+        "skip_download": True,
+        "extractor_args": EXTRACTOR_ARGS_YOUTUBE,
+    }
+    if cookiefile is not None:
+        opts["cookiefile"] = str(cookiefile)
+
+    index: dict[str, dict[str, Any]] = {}
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except Exception:  # noqa: BLE001
+        return index
+
+    for pos, entry in enumerate((info or {}).get("entries") or [], start=1):
+        if not entry:
+            continue
+        video_id = entry.get("id")
+        if not video_id:
+            continue
+        index[video_id] = {"index": entry.get("playlist_index") or pos, "title": entry.get("title")}
+    return index
+
+
 def download_playlist(
     url: str,
     output_dir: Path,
     log_path: Path,
     mode: str,
     cookiefile: Path | None = None,
-) -> list[dict[str, str | None]]:
+) -> list[dict[str, Any]]:
     """Baixa uma playlist inteira como vídeo (.mp4) ou áudio (.mp3), um arquivo numerado por item."""
+    playlist_index = _flat_playlist_index(url, cookiefile)
+
     opts = _base_opts(log_path, cookiefile)
     opts["noplaylist"] = False
     opts["yes_playlist"] = True
@@ -205,6 +252,7 @@ def download_playlist(
     # inteira em vez de pular pro próximo — equivalente a `-i`/`--ignore-errors` do yt-dlp.
     opts["ignoreerrors"] = True
     opts["outtmpl"] = str(output_dir / "%(playlist_index)s - %(title).150B [%(id)s].%(ext)s")
+    opts["logger"].playlist_index = playlist_index
     if mode == "video":
         opts.update({"format": "bestvideo+bestaudio/best", "merge_output_format": "mp4"})
     else:
@@ -226,7 +274,7 @@ def download_subtitles(
     lang: str,
     auto: bool,
     cookiefile: Path | None = None,
-) -> list[dict[str, str | None]]:
+) -> list[dict[str, Any]]:
     """Baixa só as legendas (manuais ou automáticas) no idioma escolhido, em .srt."""
     opts = _base_opts(log_path, cookiefile)
     opts.update(
@@ -245,7 +293,7 @@ def download_subtitles(
     return _run(url, opts)
 
 
-def _run(url: str, opts: dict[str, Any]) -> list[dict[str, str | None]]:
+def _run(url: str, opts: dict[str, Any]) -> list[dict[str, Any]]:
     logger: _JobLogger = opts["logger"]
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -265,6 +313,9 @@ def _run(url: str, opts: dict[str, Any]) -> list[dict[str, str | None]]:
         skipped.append(
             {
                 "id": None,
+                "index": None,
+                "title": None,
+                "url": None,
                 "reason": (
                     f"{logger.hidden_count} vídeo(s) da playlist já apareciam como indisponíveis "
                     "(removidos/privados) pro próprio YouTube antes mesmo do download começar."
@@ -283,7 +334,7 @@ def run_job(
     sub_lang: str = "pt",
     sub_auto: bool = False,
     cookiefile: Path | None = None,
-) -> list[dict[str, str | None]]:
+) -> list[dict[str, Any]]:
     """Ponto único de entrada usado por jobs.py. Levanta DownloadError com mensagem amigável.
 
     Retorna a lista de itens de playlist pulados (id + motivo amigável), vazia fora do modo

@@ -886,12 +886,32 @@ main {
   font-weight: 600;
   color: var(--status-warn-text);
   white-space: nowrap;
+  padding-top: 0.15rem;
+}
+
+.skipped-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.skipped-title {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+  word-break: break-word;
+}
+
+a.skipped-title:hover {
+  text-decoration: underline;
 }
 
 .skipped-reason {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   line-height: 1.4;
-  color: var(--text);
+  color: var(--muted);
 }
 
 .job-form-error {
