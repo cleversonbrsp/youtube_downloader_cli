@@ -195,7 +195,7 @@
               </div>
               <img
                 id="job-success-img"
-                class="job-success-img hidden"
+                class="job-success-img"
                 src="{{ url_for('static', filename='img/galocego.webp') }}?v={{ static_version('img/galocego.webp') }}"
                 alt="Deu bom!"
               />
@@ -203,10 +203,13 @@
               <div id="job-files-wrap" class="job-files-wrap hidden">
                 <div class="job-files-header">
                   <h4 class="h4-like">Arquivos prontos</h4>
-                  <a id="job-zip-link" class="btn ghost sm hidden" href="#">Baixar tudo (.zip)</a>
+                  <div class="job-files-actions">
+                    <a id="job-zip-link" class="btn ghost sm hidden" href="#">Baixar tudo (.zip)</a>
+                    <button type="button" class="btn ghost sm" id="job-files-toggle">Mostrar</button>
+                  </div>
                 </div>
                 <p id="job-files-dest" class="job-files-dest muted hidden"></p>
-                <ul id="job-files" class="files-list"></ul>
+                <ul id="job-files" class="files-list hidden"></ul>
               </div>
               <div id="job-skipped-wrap" class="job-skipped-wrap hidden">
                 <div class="job-files-header">
