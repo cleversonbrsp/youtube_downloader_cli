@@ -22,7 +22,9 @@ AppVersion={#APP_VERSION}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\TubeFetchDesktop
 DefaultGroupName={#MyAppName}
-OutputDir=Output
+; Fixo em {#SourcePath} (pasta deste .iss) para não depender de SourceDir/CWD — sem isso o
+; instalador saiu na raiz do repo em vez de packaging\Output (visto num build real no CI).
+OutputDir={#SourcePath}\Output
 OutputBaseFilename=TubeFetchDesktop-Setup-{#APP_VERSION}
 Compression=lzma2
 SolidCompression=yes
