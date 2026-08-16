@@ -4,6 +4,10 @@
 
 This Python script provides an interactive command-line interface to download **videos**, **audio**, **playlists**, and **subtitles** from YouTube. It uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) and **ffmpeg** for merging and converting media.
 
+**Prefer a graphical interface?** See [Tube Fetch Desktop](#tube-fetch-desktop-windows) below — a local
+web-based GUI for Windows with the same features (video/audio/playlist/subtitles), packaged as a
+one-click installer, no Python or ffmpeg setup required.
+
 ---
 
 ## Features
@@ -46,9 +50,55 @@ sudo dnf install ffmpeg
 
 ```
 .
-├── main.py      # Main script with interactive menu
-├── readme.md    # This documentation
-└── notes.txt    # Optional local notes
+├── main.py                              # CLI script with interactive menu
+├── readme.md                            # This documentation
+├── notes.txt                            # Optional local notes
+├── webapp/                              # Tube Fetch Desktop (local web GUI, source)
+│   ├── app.py, downloader.py, jobs.py   # Flask app + async download jobs (same engine as the CLI)
+│   ├── launcher.py                      # Entry point: starts the local server and opens the browser
+│   ├── templates/, static/              # UI (mode picker, live log, file downloads)
+│   └── requirements.txt
+├── packaging/                           # Windows build: PyInstaller spec + Inno Setup installer script
+└── .github/workflows/build-windows.yml  # Builds the .exe on a real Windows runner, publishes a Release
+```
+
+---
+
+## Tube Fetch Desktop (Windows) {#tube-fetch-desktop-windows}
+
+A local, no-install-hassle graphical version of this CLI: same video/audio/playlist/subtitles
+features, in a clean web-based interface that opens in your browser — but everything runs on
+**your own machine**, packaged as a single Windows installer (Python, ffmpeg and the JS runtime
+needed by yt-dlp are all bundled in).
+
+### Install
+
+1. Go to the [**Releases**](../../releases) page of this repository.
+2. Download the latest `TubeFetchDesktop-Setup-*.exe`.
+3. Run it and follow the installer (Portuguese/English). A desktop shortcut is optional.
+4. Launch **Tube Fetch Desktop** — it opens `http://127.0.0.1:5000` in your default browser
+   automatically. Closing the black console window stops the local server.
+
+Because it runs from your own residential IP (not a cloud/datacenter IP), most videos download
+**without needing `cookies.txt`** — unlike a cloud-hosted deployment of the same tool, which
+YouTube treats with far more suspicion. `cookies.txt` is still available as an optional,
+collapsed field for private/age-restricted/members-only videos.
+
+### Building it yourself
+
+The installer is built by [`.github/workflows/build-windows.yml`](.github/workflows/build-windows.yml)
+on a `windows-latest` GitHub Actions runner (PyInstaller can't reliably cross-compile Windows
+binaries from Linux/macOS). It runs automatically on every push to `main` that touches `webapp/`
+or `packaging/`, and publishes the resulting `.exe` as a new GitHub Release. You can also trigger
+it manually from the **Actions** tab (`workflow_dispatch`).
+
+To run from source instead (any OS, for development):
+
+```bash
+cd webapp
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python launcher.py
 ```
 
 ---
@@ -163,7 +213,7 @@ Ensure you have write permission in the output directory you choose.
 
 ## Possible future improvements
 
-- GUI (e.g. Tkinter or PyQt)
+- ~~GUI~~ → done, see [Tube Fetch Desktop](#tube-fetch-desktop-windows)
 - Convert `.srt` to `.txt`
 - Burn subtitles into video with ffmpeg
 - Support other sites (Vimeo, TikTok, etc.)

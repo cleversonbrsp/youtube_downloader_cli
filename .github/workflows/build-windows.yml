@@ -1,0 +1,115 @@
+# Tube Fetch Desktop — build do instalador Windows (.exe) num runner windows-latest de verdade,
+# já que PyInstaller não builda binários Windows a partir de Linux/Mac de forma confiável.
+#
+# Pipeline: instala deps Python -> baixa ffmpeg.exe (BtbN/FFmpeg-Builds) e deno.exe (denoland/deno)
+# -> PyInstaller (modo --onedir) -> Inno Setup (via Chocolatey) empacota como instalador ->
+# publica o instalador como Release do GitHub (aba Releases do repositório).
+#
+# Paths: webapp/**, packaging/** e este arquivo.
+
+name: build windows desktop
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "webapp/**"
+      - "packaging/**"
+      - ".github/workflows/build-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-windows-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências Python (runtime + PyInstaller)
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r webapp\requirements.txt
+          pip install pyinstaller
+
+      - name: Baixar ffmpeg.exe (BtbN/FFmpeg-Builds, win64, branch estável n8.1)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build\bin | Out-Null
+          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-gpl-8.1.zip"
+          Invoke-WebRequest -Uri $url -OutFile ffmpeg.zip
+          Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg_extract -Force
+          $bin = Get-ChildItem -Path ffmpeg_extract -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          if (-not $bin) { throw "ffmpeg.exe não encontrado no zip baixado" }
+          Copy-Item $bin.FullName build\bin\ffmpeg.exe
+          & build\bin\ffmpeg.exe -version | Select-Object -First 1
+
+      - name: Baixar deno.exe (denoland/deno, release mais recente)
+        shell: pwsh
+        run: |
+          $url = "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip"
+          Invoke-WebRequest -Uri $url -OutFile deno.zip
+          Expand-Archive -Path deno.zip -DestinationPath build\bin -Force
+          & build\bin\deno.exe --version
+
+      - name: Build com PyInstaller
+        shell: pwsh
+        run: pyinstaller packaging\tube-fetch-desktop.spec --noconfirm
+
+      - name: Smoke test — o executável sobe e responde /health
+        shell: pwsh
+        run: |
+          $proc = Start-Process -FilePath "dist\TubeFetchDesktop\TubeFetchDesktop.exe" -PassThru -WindowStyle Hidden
+          Start-Sleep -Seconds 5
+          try {
+            $resp = Invoke-WebRequest -Uri "http://127.0.0.1:5000/health" -UseBasicParsing -TimeoutSec 10
+            if ($resp.StatusCode -ne 200) { throw "status inesperado: $($resp.StatusCode)" }
+            Write-Host "OK:" $resp.Content
+          } finally {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Definir versão do app
+        id: ver
+        shell: bash
+        run: echo "version=$(date -u +%Y.%m.%d)-$(echo $GITHUB_SHA | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - name: Instalar Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Gerar instalador (.exe)
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging\installer.iss /DAPP_VERSION=${{ steps.ver.outputs.version }}
+
+      - name: Publicar artefato do build (debug/inspeção)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TubeFetchDesktop-${{ steps.ver.outputs.version }}
+          path: packaging\Output\*.exe
+          retention-days: 30
+
+      - name: Publicar Release no GitHub
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="desktop-${{ steps.ver.outputs.version }}"
+          gh release create "$TAG" \
+            packaging/Output/*.exe \
+            --title "Tube Fetch Desktop ${{ steps.ver.outputs.version }}" \
+            --notes "Instalador Windows gerado automaticamente a partir do commit ${{ github.sha }}. Baixe o .exe abaixo e execute — sem necessidade de Python, ffmpeg ou cookies.txt na maioria dos vídeos."

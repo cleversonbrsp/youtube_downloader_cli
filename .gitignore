@@ -38,3 +38,10 @@ Thumbs.db
 *.part
 *.temp
 *.ytdl
+
+# Tube Fetch Desktop — build artifacts (gerados pelo workflow build-windows.yml)
+build/
+dist/
+packaging/Output/
+*.spec.bak
+cookies.txt

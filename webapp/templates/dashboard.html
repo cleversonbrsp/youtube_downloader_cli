@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Tube Fetch Desktop — baixe vídeo, áudio, playlist e legendas do YouTube, localmente." />
+    <title>Tube Fetch Desktop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ static_version('style.css') }}" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <div class="glow glow-a" aria-hidden="true"></div>
+    <div class="glow glow-b" aria-hidden="true"></div>
+
+    <header class="top">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-text">Tube Fetch Desktop</span>
+      </a>
+      <div class="top-meta top-meta-end">
+        <span class="pill" id="svc-status" data-state="checking">Verificando…</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero hero-compact">
+        <h1 class="headline reveal" style="--d: 0ms">Baixe vídeo, áudio, playlist e legendas do YouTube</h1>
+        <p class="lede reveal" style="--d: 60ms">
+          Cole a URL, escolha o modo e inicie. Roda 100% na sua máquina — os arquivos ficam prontos
+          para baixar direto do navegador quando o job terminar.
+        </p>
+        <p class="hint block notice-uso">
+          Use apenas para conteúdo que você tem direito de baixar (seus próprios vídeos, conteúdo de domínio público
+          ou com licença/autorização explícita). Respeite os Termos de Serviço do YouTube e direitos autorais de
+          terceiros.
+        </p>
+      </section>
+
+      <section id="download" class="section section-automacao">
+        <h2 class="section-title">Novo download</h2>
+
+        {% set mode_meta = {
+          "video":          {"label": "Vídeo", "ext": ".mp4", "icon": "video"},
+          "audio":          {"label": "Áudio", "ext": ".mp3", "icon": "audio"},
+          "playlist_video": {"label": "Playlist de vídeos", "ext": ".mp4", "icon": "playlist-video"},
+          "playlist_audio": {"label": "Playlist de áudio", "ext": ".mp3", "icon": "playlist-audio"},
+          "subtitles":      {"label": "Legendas", "ext": ".srt", "icon": "subtitles"},
+        } %}
+
+        <div id="job-form-wrap" class="job-form-wrap">
+          <form id="job-form" class="run-form lote-form-inner" enctype="multipart/form-data">
+            <label class="field full">
+              <span class="label">URL do YouTube <span class="req">*</span></span>
+              <input
+                name="url"
+                id="url"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=... ou https://www.youtube.com/playlist?list=..."
+                required
+              />
+            </label>
+
+            <div class="field full">
+              <span class="label">Modo <span class="req">*</span></span>
+              <div class="mode-grid" role="radiogroup" aria-label="Modo de download">
+                {% for value in modes.keys() %}
+                {% set m = mode_meta[value] %}
+                <label class="mode-card">
+                  <input type="radio" name="mode" value="{{ value }}" {% if loop.first %}checked{% endif %} />
+                  <span class="mode-icon" data-icon="{{ m.icon }}" aria-hidden="true">
+                    {% if m.icon == "video" %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M10 9.3v5.4l5-2.7z" fill="currentColor" stroke="none"/></svg>
+                    {% elif m.icon == "audio" %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 17.5V5.5l10-2v12"/><circle cx="6.5" cy="17.5" r="2.7"/><circle cx="16.5" cy="15.5" r="2.7"/></svg>
+                    {% elif m.icon == "playlist-video" %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="3" y1="6" x2="13.5" y2="6"/><line x1="3" y1="12" x2="13.5" y2="12"/><line x1="3" y1="18" x2="10" y2="18"/><path d="M17 8.7v6.6l6-3.3z" fill="currentColor" stroke="none"/></svg>
+                    {% elif m.icon == "playlist-audio" %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="3" y1="6" x2="13.5" y2="6"/><line x1="3" y1="12" x2="13.5" y2="12"/><line x1="3" y1="18" x2="10" y2="18"/><path d="M17.5 17V8l4-.8v9" stroke-width="1.5"/><circle cx="16" cy="17.3" r="1.9"/><circle cx="20.5" cy="16.4" r="1.9"/></svg>
+                    {% else %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M7.5 13.2c0 .9.7 1.5 1.7 1.5 .8 0 1.3-.3 1.7-.8M13.6 13.2c0 .9.7 1.5 1.7 1.5 .8 0 1.3-.3 1.7-.8" stroke-linecap="round"/></svg>
+                    {% endif %}
+                  </span>
+                  <span class="mode-text">
+                    <span class="mode-title">{{ m.label }}</span>
+                    <span class="mode-ext">{{ m.ext }}</span>
+                  </span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div id="subtitle-fields" class="subtitle-fields hidden">
+              <label class="field">
+                <span class="label">Idioma da legenda</span>
+                <select name="sub_lang" id="sub_lang">
+                  <option value="pt" selected>pt-BR</option>
+                  <option value="en">en</option>
+                  <option value="es">es</option>
+                </select>
+              </label>
+              <label class="check">
+                <input type="checkbox" name="sub_auto" id="sub_auto" />
+                Usar legendas automáticas (em vez de manuais)
+              </label>
+            </div>
+
+            <details class="upload-fallback">
+              <summary>Avançado: cookies.txt <span class="muted">— só para vídeos privados/restritos</span></summary>
+              <p class="hint block">
+                Rodando aqui na sua máquina, a grande maioria dos vídeos baixa direto, sem precisar disso — você já
+                usa o seu IP normal de casa. Use esta opção só se um vídeo específico pedir login (privado, exclusivo
+                para inscritos, restrito por idade): exporte os cookies do seu navegador (logado no YouTube) em
+                formato Netscape (<code>cookies.txt</code>) e envie aqui.
+              </p>
+              <div class="how-to">
+                <h4 class="h4-like">Como conseguir o cookies.txt</h4>
+                <ol class="how-to-steps">
+                  <li>
+                    Instale uma extensão de exportação de cookies no seu navegador, logado no YouTube:
+                    <a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank" rel="noopener">Get cookies.txt LOCALLY</a>
+                    (Chrome/Edge/Brave) ou
+                    <a href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/" target="_blank" rel="noopener">cookies.txt</a>
+                    (Firefox).
+                  </li>
+                  <li>Acesse <code>youtube.com</code> já logado na sua conta.</li>
+                  <li>Clique no ícone da extensão e exporte/baixe o <code>cookies.txt</code> do site.</li>
+                  <li>Envie o arquivo baixado no campo abaixo e inicie o download normalmente.</li>
+                </ol>
+                <p class="hint block cookie-warning">
+                  ⚠️ Esse arquivo dá acesso à sua sessão logada do YouTube. Como tudo roda localmente, ele nunca sai
+                  da sua máquina — mas evite copiá-lo para outro lugar.
+                </p>
+              </div>
+              <label class="field full">
+                <span class="label">Arquivo cookies.txt</span>
+                <input name="cookies" type="file" accept=".txt,text/plain" />
+              </label>
+            </details>
+
+            <div id="job-form-error" class="job-form-error hidden" role="alert" aria-live="assertive">
+              <p id="job-form-error-msg" class="job-form-error-msg"></p>
+              <button type="button" class="btn ghost sm" id="job-form-error-dismiss">Dispensar aviso</button>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn primary lg" id="job-submit">Iniciar download</button>
+              <span class="form-hint muted" id="job-submit-hint"></span>
+            </div>
+          </form>
+
+          <div id="painel-lote" class="lote-main" aria-labelledby="painel-lote-title">
+            <h3 id="painel-lote-title" class="subsection-title">Andamento</h3>
+            <div id="job-panel-empty" class="job-panel-empty" aria-hidden="false">
+              <p><strong>Nenhum download em andamento.</strong></p>
+              <p class="muted">Preencha o formulário acima e clique em <strong>«Iniciar download»</strong>.</p>
+            </div>
+            <div id="job-panel" class="job-panel hidden" aria-live="polite">
+              <div class="job-bar">
+                <span class="job-label">Job</span>
+                <code id="job-id" class="job-id"></code>
+                <span class="pill job-status-pill" id="job-status-pill" data-state="">—</span>
+              </div>
+              <pre class="log-box" id="job-log"></pre>
+              <div id="job-files-wrap" class="job-files-wrap hidden">
+                <div class="job-files-header">
+                  <h4 class="h4-like">Arquivos prontos</h4>
+                  <a id="job-zip-link" class="btn ghost sm hidden" href="#">Baixar tudo (.zip)</a>
+                </div>
+                <ul id="job-files" class="files-list"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats" aria-label="Destaques">
+        <article class="stat-card">
+          <span class="stat-value">yt-dlp</span>
+          <span class="stat-label">Motor de download</span>
+        </article>
+        <article class="stat-card">
+          <span class="stat-value">100% local</span>
+          <span class="stat-label">Nada sai da sua máquina</span>
+        </article>
+        <article class="stat-card">
+          <span class="stat-value">Job assíncrono</span>
+          <span class="stat-label">Sem travar a janela</span>
+        </article>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>Tube Fetch Desktop</p>
+      <p class="muted">Adaptado do youtube_downloader_cli</p>
+      <p class="muted">by Cleverson Rodrigues</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='app.js') }}?v={{ static_version('app.js') }}" defer></script>
+  </body>
+</html>
