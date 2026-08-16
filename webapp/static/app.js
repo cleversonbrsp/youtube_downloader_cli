@@ -338,7 +338,10 @@
           titleEl.rel = "noopener";
         }
         titleEl.className = "skipped-title";
-        titleEl.textContent = s.title || s.id;
+        // Vídeo já indisponível quando a playlist foi listada: o YouTube não devolve título
+        // nem pra própria página dele — só sobrou o id. Deixa isso explícito em vez de mostrar
+        // o id cru como se fosse o título.
+        titleEl.textContent = s.title || "ID do vídeo: " + s.id;
         main.appendChild(titleEl);
       }
 

@@ -72,6 +72,8 @@ def _friendly_reason(raw: str) -> str:
         return "Conteúdo exclusivo para membros do canal (assinatura paga)."
     if "sign in to confirm your age" in low or ("age" in low and "confirm" in low):
         return "Restrito por idade — envie um cookies.txt (usuário logado) e tente de novo."
+    if "terms of service" in low or "community guidelines" in low:
+        return "Removido do YouTube por violar os Termos de Serviço/Diretrizes da comunidade."
     if "video unavailable" in low:
         return "Vídeo indisponível no YouTube (removido ou nunca existiu)."
     return raw
