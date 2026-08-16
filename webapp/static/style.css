@@ -831,6 +831,30 @@ main {
   white-space: nowrap;
 }
 
+.dest-dir-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.dest-dir-display {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.dest-dir-display.chosen {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.job-files-dest {
+  margin: -0.25rem 0 0.75rem;
+  font-size: 0.82rem;
+}
+
 .job-skipped-wrap {
   border-top: 1px solid var(--stroke);
   padding: 1rem 1.1rem 1.25rem;

@@ -78,6 +78,7 @@ def api_jobs_create():
     mode = (request.form.get("mode") or "").strip()
     sub_lang = (request.form.get("sub_lang") or "pt").strip()
     sub_auto = request.form.get("sub_auto") in ("on", "true", "1", "yes")
+    dest_dir = (request.form.get("dest_dir") or "").strip() or None
 
     if mode not in VALID_MODES:
         return jsonify({"error": "Escolha um modo de download válido."}), 400
@@ -89,7 +90,14 @@ def api_jobs_create():
     if cookies_file and getattr(cookies_file, "filename", None):
         cookies_bytes = cookies_file.read()
 
-    rec, err = start_job(url=url, mode=mode, sub_lang=sub_lang, sub_auto=sub_auto, cookies_bytes=cookies_bytes)
+    rec, err = start_job(
+        url=url,
+        mode=mode,
+        sub_lang=sub_lang,
+        sub_auto=sub_auto,
+        cookies_bytes=cookies_bytes,
+        dest_dir=dest_dir,
+    )
     if err:
         return jsonify({"error": err}), 400
     assert rec is not None
@@ -116,6 +124,7 @@ def api_jobs_status(job_id: str):
             "finished": rec.finished,
             "error": rec.error,
             "skipped": rec.skipped,
+            "dest_dir": rec.dest_dir,
             "log": read_log_tail(job_id),
             "files": list_job_files(job_id),
         }

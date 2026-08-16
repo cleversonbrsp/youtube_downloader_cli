@@ -77,10 +77,48 @@
   var zipLink = document.getElementById("job-zip-link");
   var skippedWrap = document.getElementById("job-skipped-wrap");
   var skippedList = document.getElementById("job-skipped");
+  var jobFilesDest = document.getElementById("job-files-dest");
+  var destDirField = document.getElementById("dest-dir-field");
+  var destDirDisplay = document.getElementById("dest-dir-display");
+  var destDirValue = document.getElementById("dest-dir-value");
+  var destDirChoose = document.getElementById("dest-dir-choose");
   var jobFormError = document.getElementById("job-form-error");
   var jobFormErrorMsg = document.getElementById("job-form-error-msg");
   var jobFormErrorDismiss = document.getElementById("job-form-error-dismiss");
   if (!form || !panel) return;
+
+  function updateDestDirVisibility() {
+    if (destDirField) destDirField.classList.toggle("hidden", !hasNativeApi());
+  }
+  window.addEventListener("pywebviewready", updateDestDirVisibility);
+  updateDestDirVisibility();
+
+  if (destDirChoose) {
+    destDirChoose.addEventListener("click", function () {
+      if (!hasNativeApi()) return;
+      var originalText = destDirChoose.textContent;
+      destDirChoose.disabled = true;
+      destDirChoose.textContent = "Abrindo…";
+      window.pywebview.api
+        .choose_download_dir()
+        .then(function (result) {
+          destDirChoose.disabled = false;
+          destDirChoose.textContent = originalText;
+          if (result && result.ok && result.path) {
+            destDirValue.value = result.path;
+            if (destDirDisplay) {
+              destDirDisplay.textContent = result.path;
+              destDirDisplay.classList.add("chosen");
+            }
+          }
+        })
+        .catch(function (e) {
+          destDirChoose.disabled = false;
+          destDirChoose.textContent = originalText;
+          setJobError(String((e && e.message) || e));
+        });
+    });
+  }
 
   var pollTimer = null;
 
@@ -155,14 +193,42 @@
       });
   }
 
-  function renderFiles(id, token, files) {
+  function renderFiles(id, token, files, destDir) {
     if (!filesList || !filesWrap) return;
     filesList.innerHTML = "";
     if (!files || files.length === 0) {
       filesWrap.classList.add("hidden");
+      if (jobFilesDest) jobFilesDest.classList.add("hidden");
       return;
     }
     filesWrap.classList.remove("hidden");
+
+    if (destDir) {
+      // Já foram baixados direto na pasta escolhida — não tem "Salvar" nem zip pra fazer,
+      // é só a conferência de que os arquivos estão lá.
+      files.forEach(function (f) {
+        var li = document.createElement("li");
+        li.className = "file-row";
+        var name = document.createElement("span");
+        name.className = "file-name";
+        name.textContent = f.name;
+        var right = document.createElement("span");
+        right.className = "file-size";
+        right.textContent = humanSize(f.size);
+        li.appendChild(name);
+        li.appendChild(right);
+        filesList.appendChild(li);
+      });
+      if (zipLink) zipLink.classList.add("hidden");
+      if (jobFilesDest) {
+        jobFilesDest.textContent = "Salvo em: " + destDir;
+        jobFilesDest.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (jobFilesDest) jobFilesDest.classList.add("hidden");
+
     files.forEach(function (f) {
       var li = document.createElement("li");
       li.className = "file-row";
@@ -262,7 +328,7 @@
         setStatus(data.status);
         logBox.textContent = data.log || "(aguardando saída…)";
         logBox.scrollTop = logBox.scrollHeight;
-        renderFiles(data.id, token, data.files);
+        renderFiles(data.id, token, data.files, data.dest_dir);
         renderSkipped(data.skipped);
         if (data.status === "completed" || data.status === "failed") {
           if (pollTimer) clearInterval(pollTimer);
@@ -321,6 +387,7 @@
         logBox.textContent = "Aguardando saída…";
         if (filesWrap) filesWrap.classList.add("hidden");
         if (skippedWrap) skippedWrap.classList.add("hidden");
+        if (jobFilesDest) jobFilesDest.classList.add("hidden");
         if (pollTimer) clearInterval(pollTimer);
         pollJob(data.id, data.token);
         pollTimer = setInterval(function () {

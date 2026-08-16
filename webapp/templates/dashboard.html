@@ -126,6 +126,17 @@
               </label>
             </div>
 
+            <div id="dest-dir-field" class="field full hidden">
+              <span class="label">Pasta de destino <span class="muted">(opcional)</span></span>
+              <div class="dest-dir-row">
+                <span id="dest-dir-display" class="dest-dir-display muted">
+                  Nenhuma pasta escolhida — os arquivos ficam prontos pra salvar um a um quando terminar.
+                </span>
+                <button type="button" class="btn ghost sm" id="dest-dir-choose">Escolher pasta…</button>
+              </div>
+              <input type="hidden" name="dest_dir" id="dest-dir-value" value="" />
+            </div>
+
             <details class="upload-fallback">
               <summary>Avançado: cookies.txt <span class="muted">— só para vídeos privados/restritos</span></summary>
               <p class="hint block">
@@ -188,6 +199,7 @@
                   <h4 class="h4-like">Arquivos prontos</h4>
                   <a id="job-zip-link" class="btn ghost sm hidden" href="#">Baixar tudo (.zip)</a>
                 </div>
+                <p id="job-files-dest" class="job-files-dest muted hidden"></p>
                 <ul id="job-files" class="files-list"></ul>
               </div>
               <div id="job-skipped-wrap" class="job-skipped-wrap hidden">

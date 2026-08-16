@@ -54,6 +54,9 @@ class JobRecord:
     # Itens de playlist pulados (id + motivo amigável). default_factory pra job.json antigo
     # (de antes desse campo existir) continuar carregando sem quebrar.
     skipped: list[dict[str, str | None]] = field(default_factory=list)
+    # Pasta escolhida pelo usuário (diálogo nativo do pywebview) pra baixar direto nela, sem
+    # passar pela pasta efêmera do job. None = comportamento antigo (salvar arquivo a arquivo).
+    dest_dir: str | None = None
 
     def to_json(self) -> dict[str, Any]:
         return asdict(self)
@@ -96,8 +99,16 @@ def read_log_tail(job_id: str) -> str:
     return data.decode("utf-8", errors="replace")
 
 
+def _effective_downloads_dir(job_id: str) -> Path:
+    """Pasta escolhida pelo usuário (rec.dest_dir), se houver; senão a pasta efêmera do job."""
+    rec = _read_record(job_id)
+    if rec and rec.dest_dir:
+        return Path(rec.dest_dir)
+    return _downloads_dir(job_id)
+
+
 def list_job_files(job_id: str) -> list[dict[str, Any]]:
-    d = _downloads_dir(job_id)
+    d = _effective_downloads_dir(job_id)
     if not d.is_dir():
         return []
     out = []
@@ -109,7 +120,7 @@ def list_job_files(job_id: str) -> list[dict[str, Any]]:
 
 def resolve_job_file(job_id: str, filename: str) -> Path | None:
     """Resolve o caminho com proteção contra path traversal; None se inválido ou inexistente."""
-    d = _downloads_dir(job_id).resolve()
+    d = _effective_downloads_dir(job_id).resolve()
     candidate = (d / filename).resolve()
     if candidate.parent != d:
         return None
@@ -125,7 +136,7 @@ def build_zip(job_id: str) -> Path | None:
     zip_path = _job_dir(job_id) / "download.zip"
     if zip_path.exists():
         return zip_path
-    d = _downloads_dir(job_id)
+    d = _effective_downloads_dir(job_id)
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in files:
             zf.write(d / f["name"], arcname=f["name"])
@@ -140,7 +151,7 @@ def _execute(job_id: str, params: dict[str, Any]) -> None:
     rec.started = _utc_now()
     _write_record(job_id, rec)
 
-    downloads_dir = _downloads_dir(job_id)
+    downloads_dir = Path(rec.dest_dir) if rec.dest_dir else _downloads_dir(job_id)
     downloads_dir.mkdir(parents=True, exist_ok=True)
     log_path = _job_dir(job_id) / "job.log"
 
@@ -185,6 +196,7 @@ def start_job(
     sub_lang: str,
     sub_auto: bool,
     cookies_bytes: bytes | None,
+    dest_dir: str | None = None,
 ) -> tuple[JobRecord | None, str | None]:
     """Cria o diretório do job e dispara a thread de download. Retorna (JobRecord, None) ou (None, erro)."""
     ensure_jobs_root()
@@ -194,6 +206,15 @@ def start_job(
         return None, "Informe a URL do vídeo ou playlist."
     if mode not in VALID_MODES:
         return None, "Modo de download inválido."
+
+    resolved_dest: str | None = None
+    if dest_dir and dest_dir.strip():
+        p = Path(dest_dir.strip())
+        if not p.is_dir():
+            return None, "A pasta de destino escolhida não existe (ou não está mais acessível)."
+        if not os.access(p, os.W_OK):
+            return None, "Sem permissão de escrita na pasta de destino escolhida."
+        resolved_dest = str(p)
 
     job_id = secrets.token_hex(16)
     token = secrets.token_urlsafe(32)
@@ -215,6 +236,7 @@ def start_job(
         started=None,
         finished=None,
         error=None,
+        dest_dir=resolved_dest,
     )
     _write_record(job_id, rec)
 

@@ -121,6 +121,19 @@ class Api:
             return {"ok": False, "error": f"Não foi possível salvar: {e}"}
         return {"ok": True, "path": str(dest)}
 
+    def choose_download_dir(self) -> dict:
+        """Abre o diálogo nativo de escolha de pasta. O caller manda esse caminho de volta em
+        POST /api/jobs (campo dest_dir) — o job baixa direto lá, sem passar pela pasta efêmera
+        do job nem precisar de um "Salvar" por arquivo."""
+        import webview
+
+        window = webview.windows[0]
+        result = window.create_file_dialog(webview.FileDialog.FOLDER)
+        if not result:
+            return {"ok": False, "path": None}  # usuário cancelou o diálogo
+        path = result[0] if isinstance(result, (list, tuple)) else result
+        return {"ok": True, "path": str(path)}
+
 
 def _wait_until_ready(timeout: float = 15.0) -> bool:
     deadline = time.monotonic() + timeout
