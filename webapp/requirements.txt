@@ -4,7 +4,10 @@ yt-dlp[default]>=2024.8.0
 pywebview>=5.3
 pythonnet>=3.0.3; sys_platform == "win32"
 # Backend GTK/WebKit2 do pywebview no Linux. Compila contra os headers de sistema instalados no
-# CI (libgirepository-2.0-dev, libcairo2-dev, pkg-config — ver build-linux.yml); em troca, a
+# CI (libgirepository1.0-dev, libcairo2-dev, pkg-config — ver build-linux.yml); em troca, a
 # janela nativa usa o WebKit2GTK já presente no sistema do usuário (Depends: no .deb), em vez de
 # embutir uma cópia incompatível com a versão da distro dele.
-PyGObject>=3.48; sys_platform == "linux"
+# Preso em <3.52: a partir da 3.52 o PyGObject exige girepository-2.0 (pacote
+# libgirepository-2.0-dev), que ainda não existe nos repositórios do Ubuntu 24.04/22.04 — só
+# libgirepository1.0-dev (girepository-1.0), que é o que a 3.5x anterior usa.
+PyGObject>=3.48,<3.52; sys_platform == "linux"
