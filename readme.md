@@ -5,8 +5,8 @@
 This Python script provides an interactive command-line interface to download **videos**, **audio**, **playlists**, and **subtitles** from YouTube. It uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) and **ffmpeg** for merging and converting media.
 
 **Prefer a graphical interface?** See [Tube Fetch Desktop](#tube-fetch-desktop-windows) below — a local
-web-based GUI for Windows with the same features (video/audio/playlist/subtitles), packaged as a
-one-click installer, no Python or ffmpeg setup required.
+web-based GUI for Windows and Linux with the same features (video/audio/playlist/subtitles),
+packaged as a one-click installer / `.deb` package, no Python or ffmpeg setup required.
 
 ---
 
@@ -58,8 +58,10 @@ sudo dnf install ffmpeg
 │   ├── launcher.py                      # Entry point: starts the local server and opens the browser
 │   ├── templates/, static/              # UI (mode picker, live log, file downloads)
 │   └── requirements.txt
-├── packaging/                           # Windows build: PyInstaller spec + Inno Setup installer script
-└── .github/workflows/build-windows.yml  # Builds the .exe on a real Windows runner, publishes a Release
+├── packaging/                           # Build packaging: PyInstaller specs (Windows/Linux), Inno Setup
+│                                         # installer script, and the .deb build script/control file
+├── .github/workflows/build-windows.yml  # Builds the .exe on a real Windows runner, publishes a Release
+└── .github/workflows/build-linux.yml    # Builds the .deb on an ubuntu-latest runner, publishes a Release
 ```
 
 ---
@@ -105,6 +107,36 @@ python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\ac
 pip install -r requirements.txt
 python launcher.py
 ```
+
+---
+
+## Tube Fetch Desktop (Linux) {#tube-fetch-desktop-linux}
+
+Same app as above, packaged as a `.deb` for Debian/Ubuntu-based distros. ffmpeg and the JS
+runtime needed by yt-dlp are bundled in; the app window itself uses the system's GTK+WebKit2
+libraries (pulled in automatically as package dependencies when you install the `.deb`) — if
+they're ever unavailable, Tube Fetch Desktop falls back to opening your default browser instead,
+same as on Windows.
+
+### Install
+
+1. Go to the [**Releases**](../../releases) page of this repository.
+2. Download the latest `tube-fetch-desktop_*_amd64.deb`.
+3. Install it: `sudo apt install ./tube-fetch-desktop_*_amd64.deb` (resolves the GTK/WebKit2
+   dependencies automatically).
+4. Launch **Tube Fetch Desktop** from your applications menu, or run `tube-fetch-desktop` in a
+   terminal.
+
+### Building it yourself
+
+The `.deb` is built by [`.github/workflows/build-linux.yml`](.github/workflows/build-linux.yml)
+on an `ubuntu-latest` GitHub Actions runner. It runs automatically on every push to `main` that
+touches `webapp/` or `packaging/`, and publishes the resulting `.deb` as a new GitHub Release
+(tagged `desktop-linux-*`, separate from the Windows `desktop-*` releases). You can also trigger
+it manually from the **Actions** tab (`workflow_dispatch`).
+
+To build the `.deb` locally instead of via CI, run PyInstaller with
+`packaging/tube-fetch-desktop-linux.spec` and then `packaging/build-deb.sh <version>`.
 
 ---
 

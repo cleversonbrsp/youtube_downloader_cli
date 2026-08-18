@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Tube Fetch Desktop
+GenericName=YouTube Downloader
+Comment=Baixe vídeos, áudio e playlists do YouTube
+Exec=/opt/tube-fetch-desktop/tube-fetch-desktop
+Terminal=false
+Categories=AudioVideo;Network;
+Icon=video-x-generic

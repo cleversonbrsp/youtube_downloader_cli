@@ -1,0 +1,14 @@
+Package: tube-fetch-desktop
+Version: __APP_VERSION__
+Section: net
+Priority: optional
+Architecture: amd64
+Depends: libgtk-3-0, libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37, gir1.2-webkit2-4.1 | gir1.2-webkit2-4.0, gir1.2-gtk-3.0
+Maintainer: Cleverson Rodrigues <cleverson.ccna@gmail.com>
+Description: Baixe vídeos, áudio e playlists do YouTube com uma interface própria
+ Tube Fetch Desktop é um app local (sem login, sem nuvem, roda 100% na sua máquina) que baixa
+ vídeos, áudio, playlists e legendas do YouTube via yt-dlp. Traz o ffmpeg já embutido — não
+ precisa instalar Python nem nada além deste pacote.
+ .
+ Se os pacotes GTK/WebKit2 do sistema não estiverem disponíveis para a janela própria, o app
+ abre automaticamente no navegador padrão em vez de travar.

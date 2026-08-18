@@ -3,3 +3,8 @@ waitress>=3.0.0
 yt-dlp[default]>=2024.8.0
 pywebview>=5.3
 pythonnet>=3.0.3; sys_platform == "win32"
+# Backend GTK/WebKit2 do pywebview no Linux. Compila contra os headers de sistema instalados no
+# CI (libgirepository-2.0-dev, libcairo2-dev, pkg-config — ver build-linux.yml); em troca, a
+# janela nativa usa o WebKit2GTK já presente no sistema do usuário (Depends: no .deb), em vez de
+# embutir uma cópia incompatível com a versão da distro dele.
+PyGObject>=3.48; sys_platform == "linux"

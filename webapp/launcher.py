@@ -171,12 +171,24 @@ def main() -> None:
         )
         # No Windows, força o WebView2 (Edge Chromium) — motor moderno, mesmo CSS/JS testado no
         # navegador. Sem o runtime do WebView2 instalado, isto levanta uma exceção tratada abaixo.
+        # No Linux, deixa o pywebview escolher (normalmente GTK+WebKit2, instalado via Depends
+        # do .deb — ver packaging/debian/control); sem esses pacotes, cai na mesma exceção.
         webview.start(gui="edgechromium" if sys.platform == "win32" else None, private_mode=False)
     except Exception as exc:  # noqa: BLE001 — qualquer falha de GUI cai para o navegador padrão
+        if sys.platform == "win32":
+            reason = (
+                "Isso costuma significar que o WebView2 Runtime não está instalado "
+                "(o Windows Update normalmente já instala isso sozinho)."
+            )
+        elif sys.platform.startswith("linux"):
+            reason = (
+                "Isso costuma significar que os pacotes GTK/WebKit2 do sistema não estão "
+                "instalados (deveriam ter vindo automaticamente com o pacote .deb)."
+            )
+        else:
+            reason = "Isso costuma significar que o motor de janela nativo não está disponível neste sistema."
         _notify(
-            "Não foi possível abrir a janela própria do Tube Fetch Desktop "
-            f"({exc}).\n\nIsso costuma significar que o WebView2 Runtime não está instalado "
-            "(o Windows Update normalmente já instala isso sozinho).\n\n"
+            f"Não foi possível abrir a janela própria do Tube Fetch Desktop ({exc}).\n\n{reason}\n\n"
             "Abrindo no seu navegador padrão em http://127.0.0.1:5000 em vez disso — "
             "a aplicação continua funcionando normalmente."
         )

@@ -4,7 +4,8 @@ Executa downloads do YouTube (downloader.py) em thread de background, um diretó
 Mesma lógica da versão hospedada (dev-ops/apps/tube-fetch/jobs.py): arquivo `job.json` + token
 aleatório por job para permitir polling seguro. Aqui, versão local/desktop: sem conceito de
 usuário/login (single-user, sua própria máquina), e o diretório de trabalho fica em
-%LOCALAPPDATA% no Windows (ou equivalente/temp em outros sistemas) em vez de /tmp de um Pod.
+%LOCALAPPDATA% no Windows, $XDG_DATA_HOME (ou ~/.local/share) no Linux, ou temp em outros
+sistemas, em vez de /tmp de um Pod.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import json
 import os
 import secrets
 import shutil
+import sys
 import tempfile
 import threading
 import time
@@ -26,8 +28,13 @@ from downloader import VALID_MODES, DownloadError, run_job
 
 
 def _default_jobs_dir() -> Path:
-    base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA") or tempfile.gettempdir()
-    return Path(base) / "TubeFetchDesktop" / "jobs"
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA") or tempfile.gettempdir()
+        return Path(base) / "TubeFetchDesktop" / "jobs"
+    if sys.platform.startswith("linux"):
+        base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+        return Path(base) / "TubeFetchDesktop" / "jobs"
+    return Path(tempfile.gettempdir()) / "TubeFetchDesktop" / "jobs"
 
 
 JOBS_ROOT = Path(os.environ.get("TUBEFETCH_DESKTOP_JOBS_DIR") or _default_jobs_dir())
