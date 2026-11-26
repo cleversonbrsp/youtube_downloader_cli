@@ -102,6 +102,7 @@ jobs:
             exit 1
           fi
           cat /tmp/health.json
+          jq -e '.bundled_tools == true' /tmp/health.json
 
       - name: Definir versão do app
         id: ver

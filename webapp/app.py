@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import hashlib
 import mimetypes
+import shutil
+import sys
 from pathlib import Path
 
 from flask import Flask, abort, jsonify, render_template, request, send_file
@@ -63,9 +65,22 @@ def request_entity_too_large(_e):
     return jsonify({"error": "Arquivo de cookies muito grande."}), 413
 
 
+def _is_bundled(name: str) -> bool:
+    bundle = getattr(sys, "_MEIPASS", None)
+    found = shutil.which(name)
+    return bool(bundle and found and Path(found).resolve().parent == Path(bundle).resolve())
+
+
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok", "service": "tube-fetch-desktop"})
+    return jsonify(
+        {
+            "status": "ok",
+            "service": "tube-fetch-desktop",
+            # Verificado pelo smoke test dos builds: o pacote precisa usar os próprios binários.
+            "bundled_tools": all(_is_bundled(name) for name in ("ffmpeg", "deno")),
+        }
+    )
 
 
 @app.route("/")

@@ -80,6 +80,7 @@ jobs:
             $resp = Invoke-WebRequest -Uri "http://127.0.0.1:5000/health" -UseBasicParsing -TimeoutSec 10
             if ($resp.StatusCode -ne 200) { throw "status inesperado: $($resp.StatusCode)" }
             Write-Host "OK:" $resp.Content
+            if (-not ($resp.Content | ConvertFrom-Json).bundled_tools) { throw "ffmpeg/deno embutidos não encontrados" }
           } finally {
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
           }

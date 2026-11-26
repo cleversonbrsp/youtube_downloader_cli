@@ -28,7 +28,10 @@ else:
 
 os.chdir(BASE_DIR)
 sys.path.insert(0, str(BASE_DIR))
-os.environ["PATH"] = str(BASE_DIR) + os.pathsep + os.environ.get("PATH", "")
+# O PyInstaller 6 (--onedir) coloca os binários em _internal/ (sys._MEIPASS), não ao lado do
+# executável: sem essa pasta no PATH o app não acha o ffmpeg/deno embutidos.
+BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", BASE_DIR))
+os.environ["PATH"] = os.pathsep.join([str(BUNDLE_DIR), str(BASE_DIR), os.environ.get("PATH", "")])
 
 PORT = int(os.environ.get("TUBEFETCH_DESKTOP_PORT", "5000"))
 URL = f"http://127.0.0.1:{PORT}/"
