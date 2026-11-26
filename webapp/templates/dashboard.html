@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Tube Fetch Desktop — baixe vídeo, áudio, playlist e legendas do YouTube, localmente." />
+    <meta name="description" content="Tube Fetch Desktop — baixe vídeos e áudio do YouTube e do Instagram, localmente." />
     <title>Tube Fetch Desktop — por Cleverson Rodrigues</title>
     <script>
       // Aplica o tema salvo antes da primeira renderização, para não piscar o tema errado.
@@ -46,14 +46,15 @@
 
     <main>
       <section class="hero hero-compact">
-        <h1 class="headline reveal" style="--d: 0ms">Baixe vídeo, áudio, playlist e legendas do YouTube</h1>
+        <h1 class="headline reveal" style="--d: 0ms">Baixe vídeo e áudio do YouTube e do Instagram</h1>
         <p class="lede reveal" style="--d: 60ms">
-          Cole a URL, escolha o modo e inicie. Roda 100% na sua máquina — os arquivos ficam prontos
+          Cole a URL, escolha o modo e inicie. Do Instagram, funciona com posts, reels e carrosséis com vídeo
+          (legendas são só do YouTube). Roda 100% na sua máquina — os arquivos ficam prontos
           para baixar direto do navegador quando o job terminar.
         </p>
         <p class="hint block notice-uso">
           Use apenas para conteúdo que você tem direito de baixar (seus próprios vídeos, conteúdo de domínio público
-          ou com licença/autorização explícita). Respeite os Termos de Serviço do YouTube e direitos autorais de
+          ou com licença/autorização explícita). Respeite os Termos de Serviço do YouTube e do Instagram e os direitos autorais de
           terceiros.
         </p>
       </section>
@@ -72,12 +73,12 @@
         <div id="job-form-wrap" class="job-form-wrap">
           <form id="job-form" class="run-form lote-form-inner" enctype="multipart/form-data">
             <label class="field full">
-              <span class="label">URL do YouTube <span class="req">*</span></span>
+              <span class="label">URL do YouTube ou Instagram <span class="req">*</span></span>
               <input
                 name="url"
                 id="url"
                 type="url"
-                placeholder="https://www.youtube.com/watch?v=... ou https://www.youtube.com/playlist?list=..."
+                placeholder="https://www.youtube.com/watch?v=... ou https://www.instagram.com/reel/..."
                 required
               />
             </label>
@@ -142,25 +143,25 @@
               <p class="hint block">
                 Rodando aqui na sua máquina, a grande maioria dos vídeos baixa direto, sem precisar disso — você já
                 usa o seu IP normal de casa. Use esta opção só se um vídeo específico pedir login (privado, exclusivo
-                para inscritos, restrito por idade): exporte os cookies do seu navegador (logado no YouTube) em
+                para inscritos, restrito por idade, ou stories do Instagram): exporte os cookies do seu navegador (logado no site do vídeo) em
                 formato Netscape (<code>cookies.txt</code>) e envie aqui.
               </p>
               <div class="how-to">
                 <h4 class="h4-like">Como conseguir o cookies.txt</h4>
                 <ol class="how-to-steps">
                   <li>
-                    Instale uma extensão de exportação de cookies no seu navegador, logado no YouTube:
+                    Instale uma extensão de exportação de cookies no seu navegador, logado no YouTube ou Instagram:
                     <a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank" rel="noopener">Get cookies.txt LOCALLY</a>
                     (Chrome/Edge/Brave) ou
                     <a href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/" target="_blank" rel="noopener">cookies.txt</a>
                     (Firefox).
                   </li>
-                  <li>Acesse <code>youtube.com</code> já logado na sua conta.</li>
+                  <li>Acesse <code>youtube.com</code> ou <code>instagram.com</code> já logado na sua conta.</li>
                   <li>Clique no ícone da extensão e exporte/baixe o <code>cookies.txt</code> do site.</li>
                   <li>Envie o arquivo baixado no campo abaixo e inicie o download normalmente.</li>
                 </ol>
                 <p class="hint block cookie-warning">
-                  ⚠️ Esse arquivo dá acesso à sua sessão logada do YouTube. Como tudo roda localmente, ele nunca sai
+                  ⚠️ Esse arquivo dá acesso à sua sessão logada no site. Como tudo roda localmente, ele nunca sai
                   da sua máquina — mas evite copiá-lo para outro lugar.
                 </p>
               </div>

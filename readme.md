@@ -110,6 +110,31 @@ python launcher.py
 
 ---
 
+## Instagram support (desktop app)
+
+Tube Fetch Desktop also downloads from **Instagram** (the CLI in `main.py` remains YouTube-only).
+Paste the link and pick a mode:
+
+| Link | Notes |
+|------|-------|
+| Post / reel / IGTV (`/p/`, `/reel/`, `/tv/`) | Public ones usually work without login. |
+| Carousel with several videos | All videos are downloaded; photos are skipped. |
+| Stories / highlights | Require `cookies.txt` from a logged-in browser. Instagram may still refuse them. |
+| Private content | Requires `cookies.txt` from an account that can see it. |
+
+Subtitles are not available for Instagram. Instagram rate-limits anonymous requests, so after many
+downloads in a row it may ask for login.
+
+### Tests
+
+```bash
+pip install -r webapp/requirements.txt
+python -m unittest discover -s tests -v        # offline unit tests
+LIVE_TESTS=1 python -m unittest discover -s tests -v   # also downloads a public Instagram video
+```
+
+---
+
 ## Tube Fetch Desktop (Linux) {#tube-fetch-desktop-linux}
 
 Same app as above, packaged as a `.deb` for Debian/Ubuntu-based distros. ffmpeg and the JS

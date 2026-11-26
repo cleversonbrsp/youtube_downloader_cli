@@ -15,6 +15,7 @@ on:
     paths:
       - "webapp/**"
       - "packaging/**"
+      - "tests/**"
       - ".github/workflows/build-windows.yml"
   workflow_dispatch:
 
@@ -42,6 +43,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r webapp\requirements.txt
           pip install pyinstaller
+
+      - name: Testes unitários
+        run: python -m unittest discover -s tests -v
 
       - name: Baixar ffmpeg.exe (BtbN/FFmpeg-Builds, win64, branch estável n8.1)
         shell: pwsh

@@ -1,5 +1,5 @@
 """
-Núcleo de download com yt-dlp: vídeo, áudio, playlist (vídeo/áudio) e legendas.
+Núcleo de download com yt-dlp (YouTube e Instagram): vídeo, áudio, playlist/carrossel e legendas.
 
 Adaptado do CLI original (youtube_downloader_cli/main.py) para rodar dentro de um job de
 background (ver jobs.py): nada de prompts interativos — todos os parâmetros chegam explícitos
@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any
 
 import yt_dlp
+
+from platforms import INSTAGRAM, detect_platform
 
 # Evita 403 no YouTube: prioriza clientes com URLs diretas (android/tv) em vez de SABR (web).
 # Mesmo truque usado no CLI original, mas "tv_embedded" foi descontinuado pelo YouTube/yt-dlp
@@ -35,6 +37,12 @@ EXTRACTOR_ARGS_YOUTUBE = {
 
 VALID_MODES = {"video", "audio", "playlist_video", "playlist_audio", "subtitles"}
 
+INSTAGRAM_NO_SUBTITLES = "O Instagram não oferece legendas para baixar. Escolha vídeo ou áudio."
+
+# Título no Instagram é genérico ("Video by fulano"): autor + id deixam o nome único e reconhecível.
+_INSTAGRAM_NAME = "%(channel,uploader_id,uploader|instagram).50B - %(title).80B [%(id)s].%(ext)s"
+_DEFAULT_NAME = "%(title).150B [%(id)s].%(ext)s"
+
 
 class DownloadError(RuntimeError):
     """Erro esperado (URL inválida, formato indisponível, bloqueio anti-bot) — mensagem amigável."""
@@ -47,6 +55,34 @@ _ITEM_ERROR_RE = re.compile(r"^(?:ERROR:\s*)?\[youtube\]\s+([A-Za-z0-9_-]{11}):\
 # "[youtube:tab] YouTube said: INFO - 10 unavailable videos are hidden" — vídeos que o próprio
 # YouTube já tira da listagem da playlist antes do yt-dlp tentar baixar (sem id individual).
 _HIDDEN_COUNT_RE = re.compile(r"(\d+)\s+unavailable videos are hidden")
+# Mesmo formato de erro por item, vindo do Instagram (ex.: um vídeo dentro de um carrossel).
+_INSTAGRAM_ITEM_ERROR_RE = re.compile(r"^(?:ERROR:\s*)?\[[Ii]nstagram(?::\w+)?\]\s+([A-Za-z0-9_-]+):\s*(.+)$")
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _instagram_reason(raw: str) -> str | None:
+    """Traduz os erros comuns do Instagram; None quando não reconhece."""
+    low = raw.lower()
+    if "no video in this post" in low:
+        return "Essa publicação não tem vídeo (só foto) — apenas vídeos podem ser baixados."
+    if any(
+        s in low
+        for s in (
+            "log in", "login", "logged-in", "cookies", "rate-limit", "empty media response",
+            "content is unreachable", "content is not available", "restricted video",
+        )
+    ):
+        return (
+            "O Instagram recusou o acesso sem uma sessão válida (conteúdo privado/restrito, story, "
+            "ou muitos pedidos seguidos). Envie um cookies.txt exportado do navegador logado no "
+            "Instagram, no campo avançado, e tente de novo. Stories podem ser recusados pelo "
+            "Instagram mesmo com cookies."
+        )
+    if "unable to obtain file audio codec" in low:
+        return "Esse vídeo não tem áudio. Baixe no modo vídeo."
+    if "unsupported url" in low:
+        return "Esse endereço do Instagram não é suportado. Use o link de um post, reel ou story."
+    return None
 
 
 def _friendly_reason(raw: str) -> str:
@@ -86,6 +122,8 @@ class _JobLogger:
         self._log_path = log_path
         self.skipped: list[dict[str, Any]] = []
         self.hidden_count = 0
+        self.errors: list[str] = []
+        self.finished_count = 0
         self._seen_ids: set[str] = set()
         # Preenchido por download_playlist() antes do download de verdade começar — a mensagem
         # de erro do yt-dlp só traz o id do vídeo, não o título nem a posição na playlist.
@@ -113,7 +151,25 @@ class _JobLogger:
             self.hidden_count = max(self.hidden_count, int(m.group(1)))
 
     def error(self, msg: str) -> None:
+        msg = _ANSI_RE.sub("", msg)
         self._write("error", msg)
+        self.errors.append(msg)
+        ig = _INSTAGRAM_ITEM_ERROR_RE.match(msg.strip())
+        if ig:
+            item_id, reason = ig.group(1), ig.group(2)
+            if item_id not in self._seen_ids:
+                self._seen_ids.add(item_id)
+                meta = self.playlist_index.get(item_id, {})
+                self.skipped.append(
+                    {
+                        "id": item_id,
+                        "index": meta.get("index"),
+                        "title": meta.get("title"),
+                        "url": None,
+                        "reason": _instagram_reason(reason) or reason,
+                    }
+                )
+            return
         m = _ITEM_ERROR_RE.match(msg.strip())
         if m:
             video_id, reason = m.group(1), m.group(2)
@@ -158,11 +214,17 @@ def _progress_hook(log_path: Path):
 
 
 def _base_opts(log_path: Path, cookiefile: Path | None) -> dict[str, Any]:
+    logger = _JobLogger(log_path)
+
+    def count_finished(d: dict[str, Any]) -> None:
+        if d.get("status") == "finished":
+            logger.finished_count += 1
+
     opts: dict[str, Any] = {
         "quiet": True,
         "no_warnings": False,
-        "logger": _JobLogger(log_path),
-        "progress_hooks": [_progress_hook(log_path)],
+        "logger": logger,
+        "progress_hooks": [_progress_hook(log_path), count_finished],
         "extractor_args": EXTRACTOR_ARGS_YOUTUBE,
         "noplaylist": True,
         "restrictfilenames": False,
@@ -172,18 +234,24 @@ def _base_opts(log_path: Path, cookiefile: Path | None) -> dict[str, Any]:
     return opts
 
 
+def _name_template(url: str) -> str:
+    return _INSTAGRAM_NAME if detect_platform(url) == INSTAGRAM else _DEFAULT_NAME
+
+
+def _video_format(url: str) -> dict[str, Any]:
+    opts: dict[str, Any] = {"format": "bestvideo+bestaudio/best", "merge_output_format": "mp4"}
+    if detect_platform(url) == INSTAGRAM:
+        # Mesma resolução: prefere H.264/AAC, que abrem em qualquer player (o padrão seria VP9).
+        opts["format_sort"] = ["res", "vcodec:h264", "acodec:aac"]
+    return opts
+
+
 def download_video(
     url: str, output_dir: Path, log_path: Path, cookiefile: Path | None = None
 ) -> list[dict[str, Any]]:
     """Baixa vídeo único, melhor vídeo+áudio, mesclado em .mp4."""
     opts = _base_opts(log_path, cookiefile)
-    opts.update(
-        {
-            "outtmpl": str(output_dir / "%(title).150B [%(id)s].%(ext)s"),
-            "format": "bestvideo+bestaudio/best",
-            "merge_output_format": "mp4",
-        }
-    )
+    opts.update({"outtmpl": str(output_dir / _name_template(url)), **_video_format(url)})
     return _run(url, opts)
 
 
@@ -194,7 +262,7 @@ def download_audio(
     opts = _base_opts(log_path, cookiefile)
     opts.update(
         {
-            "outtmpl": str(output_dir / "%(title).150B [%(id)s].%(ext)s"),
+            "outtmpl": str(output_dir / _name_template(url)),
             "format": "bestaudio/best",
             "postprocessors": [
                 {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"},
@@ -245,7 +313,9 @@ def download_playlist(
     cookiefile: Path | None = None,
 ) -> list[dict[str, Any]]:
     """Baixa uma playlist inteira como vídeo (.mp4) ou áudio (.mp3), um arquivo numerado por item."""
-    playlist_index = _flat_playlist_index(url, cookiefile)
+    # No Instagram (carrossel/destaques) essa listagem prévia só gastaria o limite de pedidos.
+    is_instagram = detect_platform(url) == INSTAGRAM
+    playlist_index = {} if is_instagram else _flat_playlist_index(url, cookiefile)
 
     opts = _base_opts(log_path, cookiefile)
     opts["noplaylist"] = False
@@ -253,10 +323,11 @@ def download_playlist(
     # Sem isso, um único item indisponível (removido, privado, etc.) aborta a playlist
     # inteira em vez de pular pro próximo — equivalente a `-i`/`--ignore-errors` do yt-dlp.
     opts["ignoreerrors"] = True
-    opts["outtmpl"] = str(output_dir / "%(playlist_index)s - %(title).150B [%(id)s].%(ext)s")
+    prefix = "%(playlist_index|1)s - "
+    opts["outtmpl"] = str(output_dir / (prefix + _name_template(url)))
     opts["logger"].playlist_index = playlist_index
     if mode == "video":
-        opts.update({"format": "bestvideo+bestaudio/best", "merge_output_format": "mp4"})
+        opts.update(_video_format(url))
     else:
         opts.update(
             {
@@ -301,7 +372,9 @@ def _run(url: str, opts: dict[str, Any]) -> list[dict[str, Any]]:
         with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([url])
     except yt_dlp.utils.DownloadError as exc:
-        msg = str(exc)
+        msg = _ANSI_RE.sub("", str(exc))
+        if detect_platform(url) == INSTAGRAM:
+            raise DownloadError(_instagram_reason(msg) or f"Falha ao baixar: {msg}") from exc
         if "sign in to confirm" in msg.lower() or "cookies" in msg.lower():
             raise DownloadError(
                 "O YouTube pediu confirmação anti-bot para esta URL. Envie um arquivo "
@@ -309,6 +382,12 @@ def _run(url: str, opts: dict[str, Any]) -> list[dict[str, Any]]:
                 "no campo opcional do formulário e tente de novo."
             ) from exc
         raise DownloadError(f"Falha ao baixar: {msg}") from exc
+
+    # Com ignoreerrors (modos de playlist) o yt-dlp não levanta exceção: sem isto, uma URL que
+    # falha por inteiro apareceria como "Concluído" sem nenhum arquivo.
+    if detect_platform(url) == INSTAGRAM and logger.errors and not logger.finished_count:
+        msg = logger.errors[-1]
+        raise DownloadError(_instagram_reason(msg) or f"Falha ao baixar: {msg}")
 
     skipped = list(logger.skipped)
     if logger.hidden_count:
@@ -346,14 +425,22 @@ def run_job(
         raise DownloadError(f"Modo de download inválido: {mode}")
     if not url.strip():
         raise DownloadError("Informe a URL do vídeo ou playlist.")
+    is_instagram = detect_platform(url) == INSTAGRAM
+    if is_instagram and mode == "subtitles":
+        raise DownloadError(INSTAGRAM_NO_SUBTITLES)
 
     if mode == "video":
-        return download_video(url, output_dir, log_path, cookiefile)
+        skipped = download_video(url, output_dir, log_path, cookiefile)
     elif mode == "audio":
-        return download_audio(url, output_dir, log_path, cookiefile)
+        skipped = download_audio(url, output_dir, log_path, cookiefile)
     elif mode == "playlist_video":
-        return download_playlist(url, output_dir, log_path, "video", cookiefile)
+        skipped = download_playlist(url, output_dir, log_path, "video", cookiefile)
     elif mode == "playlist_audio":
-        return download_playlist(url, output_dir, log_path, "audio", cookiefile)
+        skipped = download_playlist(url, output_dir, log_path, "audio", cookiefile)
     else:
         return download_subtitles(url, output_dir, log_path, sub_lang, sub_auto, cookiefile)
+
+    # Carrossel só de fotos termina sem erro e sem arquivo.
+    if is_instagram and not any(p.is_file() for p in output_dir.iterdir()):
+        raise DownloadError(_instagram_reason("There is no video in this post"))
+    return skipped

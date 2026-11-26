@@ -1,5 +1,5 @@
 """
-Tube Fetch Desktop — versão local (Windows) da interface web de download do YouTube (yt-dlp).
+Tube Fetch Desktop — versão local (Windows) da interface web de download do YouTube e Instagram (yt-dlp).
 
 Mesmo motor da versão hospedada na nuvem (dev-ops/apps/tube-fetch), sem login, banco de dados
 nem multiusuário — feito para rodar na sua própria máquina. Como usa o seu IP residencial (não
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from flask import Flask, abort, jsonify, render_template, request, send_file
 
-from downloader import VALID_MODES
+from downloader import INSTAGRAM_NO_SUBTITLES, VALID_MODES
 from jobs import (
     MAX_COOKIES_BYTES,
     build_zip,
@@ -24,6 +24,7 @@ from jobs import (
     resolve_job_file,
     start_job,
 )
+from platforms import INSTAGRAM, detect_platform
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_COOKIES_BYTES + (64 * 1024)
@@ -84,6 +85,8 @@ def api_jobs_create():
         return jsonify({"error": "Escolha um modo de download válido."}), 400
     if not url:
         return jsonify({"error": "Informe a URL do vídeo ou playlist."}), 400
+    if mode == "subtitles" and detect_platform(url) == INSTAGRAM:
+        return jsonify({"error": INSTAGRAM_NO_SUBTITLES}), 400
 
     cookies_bytes = None
     cookies_file = request.files.get("cookies")

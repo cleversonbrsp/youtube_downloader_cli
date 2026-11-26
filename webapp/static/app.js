@@ -29,7 +29,7 @@
 
   var el = document.getElementById("svc-status");
   if (el) {
-    fetch("/api/health", { headers: { Accept: "application/json" } })
+    fetch("/health", { headers: { Accept: "application/json" } })
       .then(function (r) {
         if (!r.ok) throw new Error("status " + r.status);
         return r.json();
@@ -63,6 +63,27 @@
     input.addEventListener("change", toggleSubtitleFields);
   });
   toggleSubtitleFields();
+
+  // O Instagram não tem legendas para baixar: desativa o modo quando a URL é de lá.
+  var urlField = document.getElementById("url");
+  var subtitlesRadio = document.querySelector('input[name="mode"][value="subtitles"]');
+
+  function isInstagramUrl(value) {
+    return /^\s*(https?:\/\/)?([\w-]+\.)*instagram\.com([\/?#:]|\s*$)/i.test(value);
+  }
+
+  function syncModesWithUrl() {
+    if (!urlField || !subtitlesRadio) return;
+    var blocked = isInstagramUrl(urlField.value);
+    subtitlesRadio.disabled = blocked;
+    subtitlesRadio.parentElement.classList.toggle("disabled", blocked);
+    if (blocked && subtitlesRadio.checked && modeInputs[0]) {
+      modeInputs[0].checked = true;
+      toggleSubtitleFields();
+    }
+  }
+  if (urlField) urlField.addEventListener("input", syncModesWithUrl);
+  syncModesWithUrl();
 
   var form = document.getElementById("job-form");
   var panel = document.getElementById("job-panel");

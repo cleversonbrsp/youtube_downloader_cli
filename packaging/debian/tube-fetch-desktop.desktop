@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=Tube Fetch Desktop
-GenericName=YouTube Downloader
-Comment=Baixe vídeos, áudio e playlists do YouTube
+GenericName=Video Downloader
+Comment=Baixe vídeos, áudio e playlists do YouTube e Instagram
 Exec=/opt/tube-fetch-desktop/tube-fetch-desktop
 Terminal=false
 Categories=AudioVideo;Network;

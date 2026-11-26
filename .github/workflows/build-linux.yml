@@ -20,6 +20,7 @@ on:
     paths:
       - "webapp/**"
       - "packaging/**"
+      - "tests/**"
       - ".github/workflows/build-linux.yml"
   workflow_dispatch:
 
@@ -55,6 +56,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r webapp/requirements.txt
           pip install pyinstaller
+
+      - name: Testes unitários
+        run: python -m unittest discover -s tests -v
 
       - name: Baixar ffmpeg (BtbN/FFmpeg-Builds, linux64, branch estável n8.1)
         run: |
